@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practica Cine</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div style="text-align:center; margin-top:32px;">
+        <span style="font-size:2.2rem; font-weight:bold; color:#ff5252; letter-spacing:2px; text-shadow:1px 2px 8px #2d0b0b88;">
+            🎬 CINEMAX
+        </span>
+        <div style="font-size:1.1rem; color:#fff; margin-top:4px; letter-spacing:1px;">
+            Vive la experiencia del cine moderno
+        </div>
+    </div>
+    <div id="mainContainer">
+        <div id="login">
+            <h2>Iniciar Sesión</h2>
+            <input type="text" id="usuario" placeholder="Usuario" >
+            <input type="password" id="contrasena" placeholder="Contraseña">
+            <button onclick="iniciarSesion()">Entrar</button>
+        </div>
+
+        <div id="salas" style="display:none;">
+            <h2>Seleccione sala y Asientos</h2>
+            <select id="salaSeleccion" onchange="generarAsientos()">
+                <option value="1">Sala 1</option>
+                <option value="2">Sala 2</option>
+                <option value="3">Sala 3</option>
+            </select>
+            <div id="peliculasContainer"></div>
+            <div id="asientosContainer"></div>
+            <button onclick="comprar()">Comprar</button>
+        </div>
+
+        <div id="ticket" style="display:none;">
+            <h2>Boleto</h2>
+            <p id="detallesBoleto"></p>
+            <p id="totalPago"></p>
+        </div>
+
+        <div id="logout" style="display:none;">
+            <button onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        // Mejor usar JS para cargar películas al iniciar
+        window.onload = cargarPeliculas;
+    </script>
+</body>
+</html>
