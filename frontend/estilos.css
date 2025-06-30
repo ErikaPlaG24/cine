@@ -1,159 +1,288 @@
-/* Reset básico */
-body, html {
+/* --- DISEÑO BONITO PARA TODAS LAS VISTAS --- */
+body {
     margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    background: linear-gradient(135deg, #2d0b0b 0%, #7b1f1f 100%);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: radial-gradient(ellipse at top, #e3f0fa 0%, #90caf9 100%);
     min-height: 100vh;
-    color: #fff;
+    position: relative;
 }
-
-h2 {
-    color: #ff5252;
-    letter-spacing: 1px;
-    margin-bottom: 20px;
-    text-shadow: 1px 2px 8px #2d0b0b88;
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(33, 150, 243, 0.04) 0px,
+        rgba(33, 150, 243, 0.04) 2px,
+        transparent 2px,
+        transparent 16px
+    );
+    z-index: 0;
+    pointer-events: none;
 }
-
 #login, #salas, #ticket, #logout {
-    background: rgba(40, 0, 0, 0.93);
+    position: relative;
+    z-index: 1;
+}
+
+/* LOGIN FORM */
+.login-form {
+    background: rgba(255,255,255,0.98);
+    padding: 36px 28px 28px 28px;
     border-radius: 18px;
-    box-shadow: 0 8px 32px 0 rgba(44,0,0,0.37);
-    max-width: 350px;
-    margin: 40px auto 20px auto;
-    padding: 32px 28px 24px 28px;
+    box-shadow: 0 8px 32px rgba(33,150,243,0.13), 0 1.5px 8px rgba(33,150,243,0.10);
+    max-width: 340px;
+    margin: 60px auto 30px auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    border: 1.5px solid #bbdefb;
+    position: relative;
 }
-
-input[type="text"], input[type="password"], select {
-    width: 90%;
-    padding: 12px 10px;
-    margin: 10px 0 18px 0;
-    border: none;
-    border-radius: 8px;
-    background: #fff3f3;
-    color: #7b1f1f;
-    font-size: 1rem;
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #1976d2;
+    letter-spacing: 2px;
+    font-weight: 900;
+    font-size: 1.7em;
+    text-shadow: 0 2px 12px #90caf944, 0 0px 2px #fff;
+    font-family: 'Impact', 'Segoe UI', Arial, sans-serif;
+}
+.form-group {
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+}
+.form-group label {
+    margin-bottom: 7px;
+    font-size: 15px;
+    color: #1976d2;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.login-form input[type="text"],
+.login-form input[type="password"] {
+    padding: 10px 12px;
+    border: 1.5px solid #90caf9;
+    border-radius: 6px;
+    font-size: 15px;
     outline: none;
-    box-shadow: 0 2px 8px #7b1f1f22;
-    transition: box-shadow 0.2s;
+    background: #f4fbff;
+    color: #1565c0;
+    transition: border 0.2s, box-shadow 0.2s;
 }
-input:focus, select:focus {
-    box-shadow: 0 0 0 2px #ff5252;
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px #90caf955;
+    background: #e3f2fd;
 }
-
-button {
-    background: linear-gradient(90deg, #ff5252 0%, #b71c1c 100%);
+.btn-login {
+    background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
     color: #fff;
     border: none;
-    border-radius: 8px;
-    padding: 12px 32px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-top: 10px;
+    padding: 12px 0;
+    border-radius: 6px;
+    font-size: 16px;
     cursor: pointer;
-    box-shadow: 0 4px 16px #b71c1c44;
+    font-weight: 700;
+    box-shadow: 0 2px 8px #90caf933;
     transition: background 0.2s, transform 0.1s;
+    margin-top: 8px;
+    letter-spacing: 1px;
 }
-button:hover {
-    background: linear-gradient(90deg, #b71c1c 0%, #ff5252 100%);
-    transform: translateY(-2px) scale(1.04);
+.btn-login:hover {
+    background: linear-gradient(90deg, #1565c0 0%, #42a5f5 100%);
+    transform: translateY(-2px) scale(1.03);
 }
 
-#peliculasContainer select {
-    width: 100%;
+/* SALAS Y ASIENTOS */
+#salas {
+    background: rgba(255,255,255,0.97);
+    margin: 32px auto;
+    padding: 32px 24px 26px 24px;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px #90caf933;
+    max-width: 500px;
+    border: 1.5px solid #bbdefb;
+}
+#salas h2 {
+    color: #1976d2;
     margin-bottom: 18px;
-}
-
-#asientosContainer {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 12px 10px;
-    justify-items: center;
-    align-items: center;
-    margin-bottom: 18px;
-    width: 100%;
-}
-
-.asiento {
-    width: 38px;
-    height: 38px;
-    margin: 6px 6px 6px 0;
-    display: inline-block;
-    border-radius: 8px 8px 12px 12px;
-    cursor: pointer;
-    box-shadow: 0 2px 8px #b71c1c44;
-    border: 2px solid #fff;
-    transition: background 0.2s, transform 0.1s, border 0.2s;
-    font-weight: bold;
-    font-size: 1rem;
+    font-weight: 900;
     text-align: center;
-    line-height: 38px;
-    user-select: none;
+    font-size: 1.3em;
+    letter-spacing: 1px;
+    font-family: 'Impact', 'Segoe UI', Arial, sans-serif;
+}
+#salaSeleccion, #peliculasContainer select {
+    width: 100%;
+    padding: 11px 10px;
+    border-radius: 7px;
+    border: 1.5px solid #90caf9;
+    margin-bottom: 18px;
+    font-size: 16px;
+    background: #f4fbff;
+    color: #1976d2;
+    transition: border 0.2s, background 0.2s;
+    font-weight: 500;
+}
+#salaSeleccion:focus, #peliculasContainer select:focus {
+    border-color: #1976d2;
+    background: #e3f2fd;
+}
+#asientosContainer {
+    margin: 18px 0 12px 0;
+    text-align: center;
+    min-height: 60px;
+    padding: 8px 0;
+}
+
+/* ASIENTOS CON EFECTO Y AZUL */
+.asiento {
+    width: 34px;
+    height: 34px;
+    margin: 6px 4px;
+    display: inline-block;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(33,150,243,0.08);
+    border: 2px solid transparent;
+    transition: transform 0.12s, box-shadow 0.15s, border 0.15s;
+    position: relative;
+    font-size: 11px;
+    text-align: center;
+    line-height: 30px;
+    font-weight: 600;
+}
+.asiento:hover:not(.ocupado) {
+    transform: scale(1.12);
+    box-shadow: 0 4px 16px rgba(42,82,152,0.13);
+    border: 2px solid #1976d2;
 }
 .disponible {
-    background: linear-gradient(135deg, #ff5252 60%, #b71c1c 100%);
+    background: linear-gradient(135deg, #4caf50 60%, #66bb6a 100%);
     color: #fff;
 }
 .ocupado {
-    background: linear-gradient(135deg, #333 60%, #7b1f1f 100%);
-    color: #bbb;
-    border: 2px solid #ff5252;
-    cursor: not-allowed;
-    opacity: 0.7;
+    background: linear-gradient(135deg, #f44336 60%, #e57373 100%);
+    color: #fff;
 }
 .reservado {
-    background: linear-gradient(135deg, #ffd600 60%, #ff5252 100%);
-    color: #b71c1c;
-    border: 2px solid #ffd600;
+    background: linear-gradient(135deg, #ffd600 60%, #ffe082 100%);
+    border: 2px solid #ffb300;
+    color: #000;
 }
 
+#salas button {
+    background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
+    color: #fff;
+    border: none;
+    padding: 13px 0;
+    border-radius: 7px;
+    font-size: 17px;
+    cursor: pointer;
+    font-weight: 700;
+    width: 100%;
+    margin-top: 14px;
+    box-shadow: 0 2px 8px #90caf933;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 1px;
+}
+#salas button:hover {
+    background: linear-gradient(90deg, #1565c0 0%, #42a5f5 100%);
+    transform: translateY(-2px) scale(1.03);
+}
+
+/* TICKET */
 #ticket {
-    background: rgba(255, 82, 82, 0.97);
-    color: #fff;
-    border-radius: 18px;
-    box-shadow: 0 8px 32px 0 rgba(44,0,0,0.37);
-    max-width: 350px;
-    margin: 40px auto 20px auto;
-    padding: 32px 28px 24px 28px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 3px dashed #fff;
+    background: rgba(255,255,255,0.98);
+    margin: 32px auto;
+    padding: 28px 22px 22px 22px;
+    border-radius: 16px;
+    box-shadow: 0 6px 24px #90caf933;
+    max-width: 370px;
+    text-align: center;
+    border: 1.5px solid #bbdefb;
 }
-
+#ticket h2 {
+    color: #1976d2;
+    margin-bottom: 12px;
+    font-weight: 900;
+    font-size: 1.2em;
+    font-family: 'Impact', 'Segoe UI', Arial, sans-serif;
+}
 #detallesBoleto {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-    color: #fff;
+    color: #1976d2;
+    font-size: 15px;
+    margin-bottom: 8px;
+    font-weight: 500;
 }
-
 #totalPago {
-    font-size: 1.3rem;
-    font-weight: bold;
-    color: #fff;
+    color: #1565c0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
+/* LOGOUT BUTTON */
+#logout {
+    position: fixed;
+    right: 32px;
+    bottom: 32px;
+    margin: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: flex-end;
+    background: none;
+    box-shadow: none;
+}
+#logout button {
+    background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
+    color: #fff;
+    border: none;
+    padding: 13px 28px;
+    border-radius: 28px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 4px 16px #90caf955;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#logout button:hover {
+    background: linear-gradient(90deg, #1565c0 0%, #42a5f5 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 24px #1976d288;
+}
+
+/* RESPONSIVE */
 @media (max-width: 600px) {
-    #login, #salas, #ticket, #logout {
+    .login-form, #salas, #ticket {
         max-width: 98vw;
-        padding: 18px 6vw 18px 6vw;
+        margin: 18px 1vw;
+        padding: 18px 6vw;
+        border-radius: 12px;
+    }
+    #asientosContainer {
+        font-size: 0.95em;
     }
     .asiento {
         width: 28px;
         height: 28px;
-        font-size: 0.9rem;
-        line-height: 28px;
+        margin: 4px 2px;
+        border-radius: 5px;
     }
-}
-
-::-webkit-scrollbar {
-    width: 8px;
-    background: #2d0b0b;
-}
-::-webkit-scrollbar-thumb {
-    background: #b71c1c;
-    border-radius: 8px;
+    #logout {
+        right: 10px;
+        bottom: 10px;
+    }
+    #logout button {
+        padding: 11px 18px;
+        font-size: 15px;
+    }
 }

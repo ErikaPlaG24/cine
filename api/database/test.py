@@ -19,7 +19,7 @@ def default_serializer(obj):
 def main():
     db = MySQLConnection(
         host        = "localhost",
-        port        = 4000,
+        port        = 4003,
         user        = "root",
         password    = "root",
         database    = "cine"

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Premium - Iniciar Sesión</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body> 
+    <div id="login">
+        <form id="loginForm" class="login-form" onsubmit="iniciarSesion(); return false;">
+            <h2><span aria-label="claqueta" title="Cine">🎬</span> Cine Premium - Iniciar Sesión</h2>
+            <div class="form-group">
+                <label for="usuario">Usuario</label>
+                <input type="text" id="usuario" placeholder="Usuario" required>
+            </div>
+            <div class="form-group">
+                <label for="contrasena">Contraseña</label>
+                <input type="password" id="contrasena" placeholder="Contraseña" required>
+            </div>
+            <button type="submit" class="btn-login"><span aria-label="ticket" title="Entrar">🎟️</span> Entrar</button>
+            
+            </div>
+        </form>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="mock.js"></script>
+    
+    <script>
+        let nombreUsuario = "";
+        let currentUser = null;
+
+        async function iniciarSesion() {
+            const user = document.getElementById("usuario").value;
+            const pass = document.getElementById("contrasena").value;
+            
+            console.log('Iniciando sesión con:', user, pass);
+            
+            // Validación básica
+            if (!user || user.trim() === '') {
+                alert('Por favor ingrese un usuario');
+                return;
+            }
+            
+            if (!pass || pass.trim() === '') {
+                alert('Por favor ingrese una contraseña');
+                return;
+            }
+
+            const loginButton = document.querySelector('.btn-login');
+            
+            try {
+                // Mostrar estado de carga
+                loginButton.textContent = '🔄 Cargando...';
+                loginButton.disabled = true;
+
+                console.log('Llamando a AuthAPI.login...');
+                const response = await AuthAPI.login(user, pass);
+                console.log('Respuesta del login:', response);
+                
+                if (response && response.access_token) {
+                    // Guardar datos del usuario en localStorage
+                    localStorage.setItem('cinemaUser', JSON.stringify({
+                        username: user,
+                        token: response.access_token,
+                        user: response.user || { username: user }
+                    }));
+                    
+                    // Mostrar mensaje de éxito y redireccionar automáticamente
+                    console.log('✅ Login exitoso, redirigiendo...');
+                    loginButton.textContent = '✅ ¡Éxito! Redirigiendo...';
+                    
+                    // Redireccionar inmediatamente a la página de reservas
+                    setTimeout(() => {
+                        window.location.href = 'reservas.html';
+                    }, 500);
+                } else {
+                    throw new Error('Respuesta inválida del servidor');
+                }
+            } catch (error) {
+                console.error('Error completo:', error);
+                alert("Error al iniciar sesión: " + error.message);
+            } finally {
+                // Restaurar botón
+                loginButton.textContent = '🎟️ Entrar';
+                loginButton.disabled = false;
+            }
+        }
+
+        // Verificar si ya está autenticado
+        window.addEventListener('DOMContentLoaded', function() {
+            if (isAuthenticated()) {
+                window.location.href = 'reservas.html';
+            }
+        });
+
+        async function testServerConnection() {
+            try {
+                console.log('Probando conexión al servidor...');
+                const response = await fetch('http://localhost:8000/');
+                const data = await response.json();
+                console.log('Respuesta del servidor:', data);
+                alert('✅ Servidor conectado: ' + data.message);
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

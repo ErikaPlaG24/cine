@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Premium - Tu Boleto</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body> 
+    <!-- Header con navegación -->
+    <header style="background: #667eea; color: white; padding: 15px; margin-bottom: 20px; border-radius: 0 0 10px 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+            <h1 style="margin: 0; font-size: 24px;">🎬 Cine Premium</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="welcomeMessage" style="font-size: 16px;">Bienvenido</span>
+                <button onclick="cerrarSesion()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                    <span aria-label="salir" title="Cerrar Sesión">🚪</span> Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+        <div id="ticket" style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 2px dashed #667eea;">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 30px;">
+                <span aria-label="ticket" title="Boleto">🎫</span> Tu Boleto de Cine
+            </h2>
+            
+            <div id="ticketContent" style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+                <p id="detallesBoleto" style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"></p>
+                <p id="totalPago" style="font-size: 20px; font-weight: bold; color: #28a745; text-align: center; background: white; padding: 15px; border-radius: 8px; margin: 0;"></p>
+            </div>
+            
+            <!-- Botones de acción -->
+            <div style="text-align: center; margin-top: 25px;">
+    
+                <button onclick="descargarPDF()" style="background: #E53E3E; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-right: 15px; transition: background 0.3s;" onmouseover="this.style.background='#C53030'" onmouseout="this.style.background='#E53E3E'">
+                    📄 Descargar PDF
+                </button>
+                <button onclick="nuevaCompra()" style="background: #2196F3; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#1976D2'" onmouseout="this.style.background='#2196F3'">
+                    🔙 Nueva Compra
+                </button>
+            </div>
+            
+            <!-- Información adicional -->
+            <div style="margin-top: 30px; padding: 20px; background: #e8f4fd; border-radius: 8px; text-align: center;">
+                <p style="margin: 0; color: #333; font-size: 14px;">
+                    <strong>¡Gracias por elegir Cine Premium!</strong><br>
+                    Conserve este boleto para ingresar a la sala.<br>
+                    Llegue 15 minutos antes de la función.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="script-ticket.js"></script>
+    <script src="mock.js"></script>
+    
+    <!-- Librerías para PDF con múltiples CDNs de respaldo -->
+    <script>
+        // Función para cargar scripts con fallback
+        function loadScriptWithFallback(urls, callback, errorCallback) {
+            let currentIndex = 0;
+            
+            function tryLoad() {
+                if (currentIndex >= urls.length) {
+                    if (errorCallback) errorCallback();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = urls[currentIndex];
+                script.onload = callback;
+                script.onerror = () => {
+                    console.log(`Failed to load ${urls[currentIndex]}, trying next...`);
+                    currentIndex++;
+                    tryLoad();
+                };
+                document.head.appendChild(script);
+            }
+            
+            tryLoad();
+        }
+        
+        // Cargar html2canvas
+        console.log('Cargando html2canvas...');
+        loadScriptWithFallback([
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+        ], function() {
+            console.log('html2canvas cargado exitosamente');
+            window.html2canvasLoaded = true;
+            
+            // Verificar que html2canvas está disponible globalmente
+            if (typeof window.html2canvas === 'undefined' && typeof html2canvas !== 'undefined') {
+                window.html2canvas = html2canvas;
+            }
+            
+            // Ahora cargar jsPDF
+            console.log('Cargando jsPDF...');
+            loadScriptWithFallback([
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                'https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js',
+                'https://cdn.jsdelivr.net/npm/jspdf@latest/dist/jspdf.umd.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js'
+            ], function() {
+                console.log('jsPDF cargado exitosamente');
+                window.jsPDFLoaded = true;
+                
+                // Verificar que jsPDF está disponible globalmente y exponerlo correctamente
+                if (typeof window.jsPDF === 'undefined') {
+                    // Intentar diferentes formas de acceso
+                    if (typeof jsPDF !== 'undefined') {
+                        window.jsPDF = jsPDF;
+                    } else if (typeof window.jspdf !== 'undefined') {
+                        window.jsPDF = window.jspdf.jsPDF || window.jspdf;
+                    } else if (typeof jspdf !== 'undefined') {
+                        window.jsPDF = jspdf.jsPDF || jspdf;
+                    }
+                }
+                
+                console.log('jsPDF disponible como:', typeof window.jsPDF);
+                console.log('jspdf disponible como:', typeof window.jspdf);
+            }, function() {
+                console.error('No se pudo cargar jsPDF desde ningún CDN');
+            });
+            
+        }, function() {
+            console.error('No se pudo cargar html2canvas desde ningún CDN');
+        });
+    </script>
+    
+    <script>
+        // Verificar autenticación al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('🎫 Cargando página de ticket...');
+            console.log('🔐 Verificando autenticación...');
+            
+            if (!isAuthenticated()) {
+                console.log('❌ No autenticado, redirigiendo a login...');
+                alert('Sesión expirada. Serás redirigido al login.');
+                window.location.href = 'login.html';
+                return;
+            } else {
+                console.log('✅ Usuario autenticado correctamente');
+            }
+            
+            // Mostrar nombre del usuario
+            const userData = getUserData();
+            if (userData) {
+                document.getElementById('welcomeMessage').textContent = `Bienvenido, ${userData.username}`;
+                console.log('👤 Usuario:', userData.username);
+            }
+            
+            // Cargar datos del ticket desde localStorage
+            console.log('🎫 Cargando datos del ticket...');
+            cargarTicket();
+        });
+
+        function cerrarSesion() {
+            AuthAPI.logout();
+            localStorage.removeItem('cinemaUser');
+            localStorage.removeItem('ticketData');
+            window.location.href = 'login.html';
+        }
+
+        function nuevaCompra() {
+            window.location.href = 'reservas.html';
+        }
+    </script>
+</body>
+</html>

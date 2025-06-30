@@ -1,10 +1,11 @@
 import os
 import sys
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(root_dir)
+# Agregar la carpeta api al path
+sys.path.append(os.path.dirname(__file__))
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from database.mysql_connection import MySQLConnection
 from routes.auth import router as auth_routes
 from routes.users import router as user_routes
@@ -18,6 +19,15 @@ from routes.reserved_seats import router as reserved_seat_routes
 from routes.customer_memberships import router as customer_membership_routes
 
 app = FastAPI()
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En desarrollo permite todos los orígenes
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # Initialize the database connection
 db = MySQLConnection(

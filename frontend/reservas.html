@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Premium - Reservar Boletos</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body> 
+    <!-- Header con navegación -->
+    <header style="background: #667eea; color: white; padding: 15px; margin-bottom: 20px; border-radius: 0 0 10px 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+            <h1 style="margin: 0; font-size: 24px;">🎬 Cine Premium</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="welcomeMessage" style="font-size: 16px;">Bienvenido</span>
+                <button onclick="cerrarSesion()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                    <span aria-label="salir" title="Cerrar Sesión">🚪</span> Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        <div id="salas">
+            <h2><span aria-label="pantalla" title="Pantalla">🛋️</span> Seleccione película, horario y asientos</h2>
+            
+            <!-- Selector de películas -->
+            <div class="form-group">
+                <label for="peliculaSeleccion">Película:</label>
+                <select id="peliculaSeleccion" onchange="cargarHorarios()">
+                    <option value="">Seleccione una película</option>
+                </select>
+            </div>
+
+            <!-- Selector de horarios -->
+            <div class="form-group">
+                <label for="horarioSeleccion">Horario:</label>
+                <select id="horarioSeleccion" onchange="cargarAsientosReservados()">
+                    <option value="">Seleccione un horario</option>
+                </select>
+            </div>
+
+            <!-- Selector de salas -->
+            <div class="form-group">
+                <label for="salaSeleccion">Sala:</label>
+                <select id="salaSeleccion" onchange="generarAsientos()">
+                    <option value="1">Sala 1 🍿</option>
+                    <option value="2">Sala 2 🎥</option>
+                    <option value="3">Sala 3 🎬</option>
+                </select>
+            </div>
+
+            <div id="asientosContainer"></div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="button" onclick="comprar(event); return false;" style="background: #28a745; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; margin-right: 10px;" onmouseover="this.style.background='#218838'" onmouseout="this.style.background='#28a745'">
+                    <span aria-label="ticket" title="Comprar">🎟️</span> Comprar Boletos
+                </button>
+                <button type="button" onclick="forzarRecargaDatos()" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-size: 12px; cursor: pointer;">
+                    🔄 Actualizar Asientos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="script-reservas.js"></script>
+    <script src="mock.js"></script>
+    
+    <script>
+        // Verificar autenticación al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Mostrar nombre del usuario
+            const userData = getUserData();
+            if (userData) {
+                document.getElementById('welcomeMessage').textContent = `Bienvenido, ${userData.username}`;
+            }
+            
+            // Cargar datos iniciales
+            cargarDatosIniciales();
+        });
+
+        // Evento para cuando la página se vuelve visible (regreso de otra página)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                console.log('📱 Página visible de nuevo, actualizando datos...');
+                forzarRecargaDatos();
+            }
+        });
+
+        // Evento para cuando se enfoca la ventana
+        window.addEventListener('focus', function() {
+            console.log('🔍 Ventana enfocada, actualizando datos...');
+            forzarRecargaDatos();
+        });
+
+        function cerrarSesion() {
+            AuthAPI.logout();
+            localStorage.removeItem('cinemaUser');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
