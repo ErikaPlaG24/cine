@@ -117,7 +117,6 @@ async function cargarPeliculas() {
         });
         
         console.log('Películas cargadas:', peliculasData);
-        showNotification(`${peliculasData.length} películas cargadas`, 'success');
     } catch (error) {
         console.log('Error cargando películas:', error);
         showNotification('Error cargando películas: ' + error.message, 'error');
@@ -127,6 +126,11 @@ async function cargarPeliculas() {
 async function cargarHorarios() {
     const peliculaId = document.getElementById("peliculaSeleccion").value;
     const horarioSelect = document.getElementById("horarioSeleccion");
+    const salaSelector = document.getElementById("salaSeleccion");
+    
+    // Desbloquear selector de sala al cambiar de película
+    salaSelector.disabled = false;
+    salaSelector.style.opacity = "1";
     
     if (!peliculaId) {
         horarioSelect.innerHTML = '<option value="">Seleccione un horario</option>';
@@ -168,12 +172,20 @@ async function cargarHorarios() {
 
 async function cargarAsientosReservados() {
     const horarioId = document.getElementById("horarioSeleccion").value;
+    const salaSelector = document.getElementById("salaSeleccion");
     
     if (!horarioId) {
         console.log('⚠️ No hay horario seleccionado, generando asientos vacíos');
+        // Desbloquear selector de sala si no hay horario seleccionado
+        salaSelector.disabled = false;
+        salaSelector.style.opacity = "1";
         generarAsientos();
         return;
     }
+
+    // Bloquear selector de sala una vez que se selecciona un horario
+    salaSelector.disabled = true;
+    salaSelector.style.opacity = "0.6";
 
     try {
         console.log('🔄 Cargando asientos reservados para horario:', horarioId);
@@ -457,3 +469,29 @@ function forzarRecargaDatos() {
         cargarAsientosReservados();
     }
 }
+
+// Función de inicialización para establecer el estado inicial
+function inicializarEstadoSelectores() {
+    const salaSelector = document.getElementById("salaSeleccion");
+    const horarioSelector = document.getElementById("horarioSeleccion");
+    
+    // Si no hay horario seleccionado, asegurar que el selector de sala esté desbloqueado
+    if (!horarioSelector.value) {
+        salaSelector.disabled = false;
+        salaSelector.style.opacity = "1";
+    }
+}
+
+// Ejecutar inicialización cuando la página cargue
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarEstadoSelectores();
+    
+    // También verificar autenticación
+    if (!isAuthenticated()) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    // Cargar datos iniciales
+    cargarPeliculas();
+});

@@ -107,7 +107,7 @@ function enableMockMode() {
         window.getUserData = () => ({ id: 1, username: "admin" });
     }
     
-    // Mostrar indicador visual
+    // Mostrar indicador visual silencioso (solo banda de color)
     let indicator = document.getElementById('mock-indicator');
     if (!indicator) {
         indicator = document.createElement('div');
@@ -118,22 +118,10 @@ function enableMockMode() {
             left: 0;
             right: 0;
             background: #ff9800;
-            color: white;
-            text-align: center;
-            padding: 5px;
-            font-size: 12px;
+            height: 3px;
             z-index: 9999;
-            font-weight: bold;
         `;
-        indicator.textContent = '🧪 MODO MOCK ACTIVO - Credenciales: admin/123456';
         document.body.appendChild(indicator);
-    }
-    
-    // Mostrar notificación
-    if (window.showNotification) {
-        window.showNotification('Modo mock activado. Use: admin/123456', 'success');
-    } else {
-        alert('Modo mock activado. Credenciales: admin/123456');
     }
 }
 
