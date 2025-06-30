@@ -18,6 +18,7 @@ services:
     working_dir: /app
     volumes:
       - ./api:/app
+      - ./frontend:/app/frontend
     command: >
       sh -c "pip install fastapi uvicorn mysql-connector-python python-dotenv passlib python-jose[cryptography] bcrypt &&
              uvicorn main:app --host 0.0.0.0 --port 8000"
@@ -27,6 +28,8 @@ services:
       - cine-mysql
     environment:
       - MYSQL_HOST=cine-mysql
+      - JWT_SECRET_KEY=mi_clave_secreta_super_segura_para_jwt_tokens_2024
+      - JWT_REFRESH_SECRET_KEY=mi_clave_secreta_para_refresh_tokens_2024
     networks:
       - cine-network
 

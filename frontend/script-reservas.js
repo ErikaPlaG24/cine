@@ -11,6 +11,78 @@ const asientosSeleccionados = {
   3: new Set()
 };
 
+// Flag para prevenir eventos automáticos durante limpieza
+let isClearing = false;
+
+// Función wrapper para manejar cambios de horario
+function onHorarioChange() {
+    const horarioId = document.getElementById("horarioSeleccion").value;
+    console.log('🎬 === CAMBIO DE HORARIO DETECTADO ===');
+    console.log('🎬 Horario seleccionado:', horarioId);
+    console.log('🎬 isClearing flag:', isClearing);
+    
+    if (isClearing) {
+        console.log('⏭️ Ignorando evento onHorarioChange porque estamos limpiando');
+        return;
+    }
+    
+    console.log('✅ Procesando cambio de horario válido');
+    
+    if (horarioId) {
+        console.log('🔄 Cargando asientos reservados para horario:', horarioId);
+        cargarAsientosReservados();
+    } else {
+        console.log('⚠️ No hay horario seleccionado, limpiando asientos');
+        asientosReservadosData = [];
+        generarAsientos();
+    }
+}
+
+// Función para limpiar completamente el estado de selección
+async function limpiarEstadoCompleto(recargarHorarios = true) {
+    console.log('🧹 === LIMPIEZA COMPLETA DEL ESTADO ===');
+    
+    isClearing = true;
+    
+    // Limpiar selecciones
+    document.getElementById("horarioSeleccion").value = "";
+    document.getElementById("horarioSeleccion").selectedIndex = 0;
+    
+    // Limpiar datos en memoria
+    asientosReservadosData = [];
+    
+    // Limpiar asientos seleccionados
+    const sala = document.getElementById("salaSeleccion").value;
+    if (sala && asientosSeleccionados[sala]) {
+        asientosSeleccionados[sala].clear();
+    }
+    
+    // Regenerar asientos limpios
+    generarAsientos();
+    
+    isClearing = false;
+    
+    // IMPORTANTE: Recargar horarios para la película actual después de limpiar (solo si no estamos ya en cargarHorarios)
+    if (recargarHorarios) {
+        const peliculaActual = document.getElementById("peliculaSeleccion").value;
+        console.log('🔄 Verificando recarga de horarios...');
+        console.log('🔄 Película actual seleccionada:', peliculaActual);
+        console.log('🔄 ¿Debería recargar horarios?', !!peliculaActual);
+        
+        if (peliculaActual) {
+            console.log('🔄 Recargando horarios para película actual:', peliculaActual);
+            await cargarHorarios();
+            console.log('🔄 Recarga de horarios completada');
+        } else {
+            console.log('⚠️ No hay película seleccionada para recargar horarios');
+        }
+    } else {
+        console.log('⏭️ Salteando recarga de horarios (recargarHorarios = false)');
+    }
+    
+    console.log('✅ Estado completamente limpiado');
+}
+
 // Función para formatear tiempo
 function formatTime(timeString, dateString = null) {
     try {
@@ -85,6 +157,8 @@ async function cargarDatosIniciales() {
         }
         
         await cargarPeliculas();
+        // Verificar y corregir cualquier inconsistencia entre película y horario seleccionados
+        await verificarConsistenciaPeliculaHorario();
         // Seleccionar la primera sala por defecto
         document.getElementById("salaSeleccion").value = "1";
         generarAsientos();
@@ -97,6 +171,44 @@ async function cargarDatosIniciales() {
     } catch (error) {
         console.error('Error cargando datos iniciales:', error);
         showNotification('Error cargando datos: ' + error.message, 'error');
+    }
+}
+
+// Función para verificar y corregir inconsistencias entre película y horario
+async function verificarConsistenciaPeliculaHorario() {
+    try {
+        const peliculaId = document.getElementById("peliculaSeleccion").value;
+        const horarioId = document.getElementById("horarioSeleccion").value;
+        
+        // Si no hay película o horario seleccionado, no hay nada que verificar
+        if (!peliculaId || !horarioId) {
+            console.log('🔍 No hay película y horario para verificar consistencia');
+            return;
+        }
+        
+        // Cargar horarios si no están cargados
+        if (horariosData.length === 0) {
+            const response = await retryApiCall(() => ShowtimesAPI.getAll());
+            horariosData = Array.isArray(response) ? response : (response.showtimes || []);
+        }
+        
+        // Verificar si el horario seleccionado pertenece a la película seleccionada
+        const horarioSeleccionado = horariosData.find(h => h.showtime_id == horarioId);
+        if (horarioSeleccionado && horarioSeleccionado.movie_id != peliculaId) {
+            console.warn('⚠️ INCONSISTENCIA DETECTADA al cargar: película/horario no coinciden');
+            console.warn('Película seleccionada:', peliculaId);
+            console.warn('Horario seleccionado:', horarioSeleccionado);
+            
+            // Usar la función de limpieza completa
+            await limpiarEstadoCompleto();
+            
+            console.log('✅ Inconsistencia corregida automáticamente');
+            showNotification('Se detectó una selección inconsistente que fue corregida automáticamente.', 'info');
+        } else {
+            console.log('✅ Verificación de consistencia: Todo correcto');
+        }
+    } catch (error) {
+        console.error('Error verificando consistencia:', error);
     }
 }
 
@@ -128,12 +240,28 @@ async function cargarHorarios() {
     const horarioSelect = document.getElementById("horarioSeleccion");
     const salaSelector = document.getElementById("salaSeleccion");
     
+    console.log('🎬 === CARGANDO HORARIOS ===');
+    console.log('🎬 Película seleccionada:', peliculaId);
+    console.log('🎬 isClearing flag:', isClearing);
+    
     // Desbloquear selector de sala al cambiar de película
     salaSelector.disabled = false;
     salaSelector.style.opacity = "1";
     
+    // Limpiar asientos reservados de la película anterior
+    asientosReservadosData = [];
+    console.log('🧹🧹🧹 ASIENTOS LIMPIADOS AL CAMBIAR PELÍCULA 🧹🧹🧹');
+    console.log('🧹 asientosReservadosData.length después de limpiar:', asientosReservadosData.length);
+    
+    // Establecer flag para prevenir eventos automáticos
+    isClearing = true;
+    
     if (!peliculaId) {
         horarioSelect.innerHTML = '<option value="">Seleccione un horario</option>';
+        horarioSelect.value = "";
+        isClearing = false;
+        // Regenerar asientos limpios cuando no hay película seleccionada
+        generarAsientos();
         return;
     }
 
@@ -143,53 +271,121 @@ async function cargarHorarios() {
         horariosData = Array.isArray(response) ? response : (response.showtimes || []);
         
         // Filtrar horarios por película seleccionada
-        const horariosPelicula = horariosData.filter(horario => 
-            horario.movie_id == peliculaId
-        );
+        console.log('🎭 TODOS LOS HORARIOS del servidor:', horariosData);
+        console.log('🎭 PELÍCULA SELECCIONADA ID:', peliculaId);
+        console.log('🎭 TIPO de peliculaId:', typeof peliculaId);
+        
+        const horariosPelicula = horariosData.filter(horario => {
+            const coincide = horario.movie_id == peliculaId;
+            console.log(`🎭 Horario ID ${horario.showtime_id}: movie_id=${horario.movie_id} (tipo: ${typeof horario.movie_id}), coincide con película ${peliculaId}: ${coincide}`);
+            return coincide;
+        });
+        
+        console.log('🎭 HORARIOS FILTRADOS para película:', horariosPelicula);
         
         horarioSelect.innerHTML = '<option value="">Seleccione un horario</option>';
         
+        // IMPORTANTE: Limpiar la selección de horario al cambiar de película
+        // Esto previene que quede seleccionado un horario de otra película
+        await limpiarEstadoCompleto(false); // false = no recargar horarios (ya estamos cargándolos)
+        console.log('🧹 Estado limpiado al cambiar película');
+        
         horariosPelicula.forEach(horario => {
             const option = document.createElement("option");
-            option.value = horario.id;
-            // Mostrar hora, fecha y sala de forma más clara
-            const fechaFormateada = formatDate(horario.date);
-            const horaFormateada = formatTime(horario.start_time);
+            option.value = horario.showtime_id; // Usar showtime_id en lugar de id
+            // Usar datetime para extraer fecha y hora
+            const fechaFormateada = formatDate(horario.datetime);
+            const horaFormateada = formatTime(horario.datetime);
             option.textContent = `${horaFormateada} - ${fechaFormateada} - Sala ${horario.theater_id}`;
             option.dataset.theaterId = horario.theater_id;
+            option.dataset.movieId = horario.movie_id; // Agregar movie_id para debug
             horarioSelect.appendChild(option);
+            
+            console.log(`🎭 Agregando horario: ID=${horario.showtime_id}, Movie_ID=${horario.movie_id}, Theater=${horario.theater_id}`);
         });
         
         console.log('Horarios cargados:', horariosPelicula);
         if (horariosPelicula.length === 0) {
             showNotification('No hay horarios disponibles para esta película', 'info');
         }
+        
+        // Regenerar asientos limpios después de cargar nuevos horarios
+        // También limpiar asientos reservados porque ya no hay horario seleccionado
+        asientosReservadosData = [];
+        generarAsientos();
+        
+        // Limpiar flag al finalizar
+        isClearing = false;
     } catch (error) {
         console.log('Error cargando horarios:', error);
         showNotification('Error cargando horarios: ' + error.message, 'error');
+        isClearing = false; // Asegurar que se limpia el flag incluso en caso de error
     }
 }
 
 async function cargarAsientosReservados() {
+    // Si estamos en proceso de limpieza, no ejecutar esta función
+    if (isClearing) {
+        console.log('⏭️ Saltando cargarAsientosReservados porque estamos limpiando');
+        return;
+    }
+    
     const horarioId = document.getElementById("horarioSeleccion").value;
     const salaSelector = document.getElementById("salaSeleccion");
+    
+    console.log('🎯 === CARGANDO ASIENTOS RESERVADOS ===');
+    console.log('🎯 Horario ID:', horarioId);
+    console.log('🎯 isClearing flag:', isClearing);
     
     if (!horarioId) {
         console.log('⚠️ No hay horario seleccionado, generando asientos vacíos');
         // Desbloquear selector de sala si no hay horario seleccionado
         salaSelector.disabled = false;
         salaSelector.style.opacity = "1";
+        // Limpiar completamente los asientos reservados
+        asientosReservadosData = [];
         generarAsientos();
         return;
+    }
+
+    // VALIDACIÓN CRÍTICA: Verificar que el horario pertenece a la película actual
+    const peliculaId = document.getElementById("peliculaSeleccion").value;
+    if (peliculaId && horariosData.length > 0) {
+        const horarioSeleccionado = horariosData.find(h => h.showtime_id == horarioId);
+        if (horarioSeleccionado && horarioSeleccionado.movie_id != peliculaId) {
+            console.error('❌ INCONSISTENCIA EN cargarAsientosReservados');
+            console.error('Película actual:', peliculaId);
+            console.error('Horario seleccionado:', horarioSeleccionado);
+            
+            // Usar la función de limpieza completa
+            await limpiarEstadoCompleto();
+            showNotification('Selección inconsistente detectada y corregida.', 'warning');
+            return;
+        }
     }
 
     // Bloquear selector de sala una vez que se selecciona un horario
     salaSelector.disabled = true;
     salaSelector.style.opacity = "0.6";
 
+    // IMPORTANTE: Limpiar asientos reservados anteriores antes de cargar nuevos
+    asientosReservadosData = [];
+    console.log('🧹 Asientos reservados limpiados antes de cargar el horario:', horarioId);
+
     try {
         console.log('🔄 Cargando asientos reservados para horario:', horarioId);
         console.log('🌐 Llamando al endpoint:', `/reserved_seats/showtime/${horarioId}`);
+        console.log('🎬 IMPORTANTE: Estos asientos son SOLO para el horario ID:', horarioId);
+        
+        // Verificar qué película corresponde a este horario
+        const peliculaActual = document.getElementById("peliculaSeleccion").value;
+        const horarioActual = horariosData.find(h => h.showtime_id == horarioId);
+        console.log('🎭 VERIFICACIÓN: Película seleccionada:', peliculaActual);
+        console.log('🎭 VERIFICACIÓN: Horario encontrado:', horarioActual);
+        if (horarioActual) {
+            console.log('🎭 VERIFICACIÓN: Movie_ID del horario:', horarioActual.movie_id);
+            console.log('🎭 VERIFICACIÓN: ¿Coinciden?', horarioActual.movie_id == peliculaActual);
+        }
         
         const asientosReservados = await ReservedSeatsAPI.getByShowtime(parseInt(horarioId));
         asientosReservadosData = asientosReservados;
@@ -199,20 +395,14 @@ async function cargarAsientosReservados() {
         console.log('📋 Tipo de respuesta:', typeof asientosReservados);
         console.log('📋 Es array:', Array.isArray(asientosReservados));
         console.log('📋 Cantidad de asientos reservados:', asientosReservados.length);
+        console.log('📋 asientosReservadosData actualizado:', asientosReservadosData);
         
         if (asientosReservados.length > 0) {
             console.log('🪑 DETALLES DE CADA ASIENTO RESERVADO:');
+            console.log('🚨 HORARIO_ID ACTUAL:', horarioId);
             asientosReservados.forEach((asiento, index) => {
-                console.log(`   Asiento ${index + 1}:`, {
-                    id: asiento.id,
-                    seat_number: asiento.seat_number,
-                    seat_row: asiento.seat_row,
-                    seat_number_parsed: asiento.seat_number_parsed,
-                    showtime_id: asiento.showtime_id,
-                    sale_id: asiento.sale_id,
-                    reservation_date: asiento.reservation_date,
-                    OBJETO_COMPLETO: asiento
-                });
+                console.log(`   Asiento ${index + 1}:`, asiento);
+                console.log(`   Tipo:`, typeof asiento);
             });
         } else {
             console.log('⚠️ NO SE ENCONTRARON ASIENTOS RESERVADOS para este horario');
@@ -248,6 +438,18 @@ function generarAsientos() {
     
     const filas = ["A", "B", "C", "D"];
     const sala = document.getElementById("salaSeleccion").value;
+    const horarioId = document.getElementById("horarioSeleccion").value;
+    
+    // Log para debug del problema de asientos cruzados
+    console.log('🎯 === GENERANDO ASIENTOS ===');
+    console.log('🎯 Sala seleccionada:', sala);
+    console.log('🎯 Horario seleccionado:', horarioId);
+    console.log('🎯 Asientos reservados en memoria:', asientosReservadosData.length);
+    console.log('🎯 Contenido de asientosReservadosData:', asientosReservadosData);
+    if (asientosReservadosData.length > 0) {
+        console.log('🎯 Primer asiento reservado (ejemplo):', asientosReservadosData[0]);
+        console.log('🎯 Tipo del primer asiento:', typeof asientosReservadosData[0]);
+    }
     
     if (!sala) {
         cont.innerHTML = "<p>Seleccione una sala</p>";
@@ -275,42 +477,23 @@ function generarAsientos() {
             div.textContent = idAsiento;
             
             // Verificar si el asiento está reservado en el backend
-            console.log(`🔍 Verificando asiento ${idAsiento}...`);
-            console.log(`🔍 asientosReservadosData tiene ${asientosReservadosData.length} asientos`);
-            
             const estaReservado = asientosReservadosData.some(asiento => {
-                // La estructura actual del backend devuelve seat_number completo (ej: "A1")
-                const coincideAsientoCompleto = asiento.seat_number === idAsiento;
+                // El backend ahora devuelve un array de strings simples como ["A1", "A2"]
+                // No objetos con propiedades
+                if (typeof asiento === 'string') {
+                    return asiento === idAsiento;
+                }
                 
-                // También verificar por fila y número parseados si están disponibles
+                // Mantener compatibilidad con formato anterior por si acaso
+                const coincideAsientoCompleto = asiento.seat_number === idAsiento;
                 const coincideFilaYNumero = asiento.seat_row === fila && 
                                            String(asiento.seat_number_parsed) === String(i);
                 
-                const resultado = coincideAsientoCompleto || coincideFilaYNumero;
-                
-                console.log(`🔍 Comparando ${idAsiento} con asiento reservado:`, {
-                    asientoReservado: asiento,
-                    idAsiento: idAsiento,
-                    fila: fila,
-                    numero: i,
-                    'asiento.seat_number': asiento.seat_number,
-                    'asiento.seat_row': asiento.seat_row,
-                    'asiento.seat_number_parsed': asiento.seat_number_parsed,
-                    coincideAsientoCompleto,
-                    coincideFilaYNumero,
-                    resultado
-                });
-                
-                if (resultado) {
-                    console.log(`🔒 ¡ASIENTO ${idAsiento} ESTÁ RESERVADO!`);
-                }
-                
-                return resultado;
+                return coincideAsientoCompleto || coincideFilaYNumero;
             });
             
-            console.log(`🔍 Resultado final para ${idAsiento}: ${estaReservado ? 'RESERVADO' : 'DISPONIBLE'}`);
-            
             if (estaReservado) {
+                console.log(`🔒 ¡ASIENTO ${idAsiento} ESTÁ RESERVADO!`);
                 div.classList.add("ocupado");
                 div.title = "Asiento ocupado";
             } else if (seleccionados.has(idAsiento)) {
@@ -362,6 +545,21 @@ async function comprar(event) {
     const peliculaId = document.getElementById("peliculaSeleccion").value;
     const sala = document.getElementById("salaSeleccion").value;
     
+    // VALIDACIÓN CRÍTICA: Verificar que el horario seleccionado pertenece a la película seleccionada
+    if (horarioId && peliculaId) {
+        const horarioSeleccionado = horariosData.find(h => h.showtime_id == horarioId);
+        if (horarioSeleccionado && horarioSeleccionado.movie_id != peliculaId) {
+            console.error('❌ BUG DETECTADO: Horario seleccionado no corresponde a la película');
+            console.error('Película seleccionada:', peliculaId);
+            console.error('Horario seleccionado:', horarioSeleccionado);
+            showNotification("Error: El horario seleccionado no corresponde a la película. Por favor, seleccione un horario válido.", 'error');
+            // Usar la función de limpieza completa
+            await limpiarEstadoCompleto();
+            return false;
+        }
+        console.log('✅ Validación horario-película CORRECTA');
+    }
+    
     if (!horarioId || !peliculaId) {
         showNotification("Seleccione una película y un horario.", 'error');
         return false;
@@ -381,15 +579,24 @@ async function comprar(event) {
         // Crear la venta
         const asientosSeleccionadosArray = Array.from(seleccionados);
         const saleData = {
-            customer_user_id: currentUser.id || 1, // Si no tenemos el ID del usuario, usar 1 como default
+            customer_user_id: currentUser.id || 1, // Usar customer_user_id como está en la tabla
             showtime_id: parseInt(horarioId),
-            ticket_quantity: seleccionados.size,
-            total: seleccionados.size * 75,
+            ticket_quantity: seleccionados.size, // Usar ticket_quantity como está en la tabla
+            subtotal: seleccionados.size * 75,
+            total: seleccionados.size * 75, // Usar total como está en la tabla
             payment_method: "cash",
             seats: asientosSeleccionadosArray
         };
         
         console.log('📤 Enviando datos de venta:', saleData);
+        console.log('📤 Detalles de los datos:');
+        console.log('- customer_user_id:', saleData.customer_user_id, typeof saleData.customer_user_id);
+        console.log('- showtime_id:', saleData.showtime_id, typeof saleData.showtime_id);
+        console.log('- ticket_quantity:', saleData.ticket_quantity, typeof saleData.ticket_quantity);
+        console.log('- total:', saleData.total, typeof saleData.total);
+        console.log('- payment_method:', saleData.payment_method, typeof saleData.payment_method);
+        console.log('- seats:', saleData.seats, Array.isArray(saleData.seats));
+        
         const saleResponse = await SalesAPI.create(saleData);
         console.log('✅ Venta creada exitosamente:', saleResponse);
         
@@ -397,15 +604,15 @@ async function comprar(event) {
         
         // Preparar datos del ticket
         const pelicula = peliculasData.find(p => p.id == peliculaId);
-        const horario = horariosData.find(h => h.id == horarioId);
+        const horario = horariosData.find(h => h.showtime_id == horarioId);
         
         const ticketData = {
-            usuario: nombreUsuario,
+            usuario: nombreUsuario || 'Usuario',
             pelicula: pelicula ? pelicula.title : 'Película seleccionada',
-            genero: pelicula ? pelicula.genre : 'N/A',
-            duracion: pelicula ? pelicula.duration : 'N/A',
-            horario: horario ? formatTime(horario.start_time) : 'Horario seleccionado',
-            fecha: horario ? formatDate(horario.date) : new Date().toLocaleDateString('es-ES'),
+            genero: pelicula ? (pelicula.original_language === 'en' ? 'Película Internacional' : 'Película Nacional') : 'N/A',
+            duracion: pelicula && pelicula.duration_minutes ? pelicula.duration_minutes : 'N/A',
+            horario: horario ? formatTime(horario.datetime) : 'Horario seleccionado',
+            fecha: horario ? formatDate(horario.datetime) : new Date().toLocaleDateString('es-ES'),
             sala: sala,
             asientos: Array.from(seleccionados),
             total: seleccionados.size * 75,
@@ -424,20 +631,69 @@ async function comprar(event) {
         // Limpiar asientos seleccionados
         seleccionados.clear();
         
+        // Recargar asientos reservados inmediatamente para reflejar la compra
+        console.log('🔄 Recargando asientos después de compra exitosa...');
+        await cargarAsientosReservados();
+        
+        // Regenerar la visualización de asientos para mostrar los recién ocupados
+        generarAsientos();
+        
         // Mostrar mensaje de éxito
         console.log('🎉 ¡Compra realizada exitosamente!');
         showNotification('¡Compra realizada exitosamente!', 'success');
+        
+        // Agregar botón de backup para ir al ticket
+        comprarButton.innerHTML = '🎫 Ver Ticket';
+        comprarButton.onclick = () => window.location.href = './ticket.html';
+        comprarButton.style.backgroundColor = '#28a745';
+        comprarButton.disabled = false;
         
         // Verificar autenticación antes de redirigir
         console.log('🔐 Verificando autenticación antes de redirigir...');
         console.log('🔐 isAuthenticated():', isAuthenticated());
         console.log('🔐 localStorage cinemaUser:', !!localStorage.getItem('cinemaUser'));
         
-        // Redireccionar inmediatamente a la página del ticket
-        console.log('🔄 Redirigiendo a ticket.html...');
-        console.log('🔄 URL actual:', window.location.href);
-        console.log('🔄 Ejecutando redirección...');
-        window.location.href = 'ticket.html';
+        // Redirección inmediata y como backup después de un delay
+        console.log('🔄 Intentando redirección inmediata...');
+        try {
+            window.location.href = './ticket.html';
+        } catch (e) {
+            console.error('❌ Redirección inmediata falló:', e);
+        }
+        
+        // Esperar un momento para que el usuario vea los asientos actualizados
+        setTimeout(() => {
+            console.log('🔄 Iniciando redirección al ticket...');
+            console.log('🔄 URL actual:', window.location.href);
+            
+            try {
+                // Método simple y directo
+                console.log('🔄 Redirigiendo a ticket.html...');
+                
+                // Intentar múltiples métodos de redirección
+                if (window.location.replace) {
+                    window.location.replace('./ticket.html');
+                } else if (window.location.href) {
+                    window.location.href = './ticket.html';
+                } else {
+                    // Método de último recurso
+                    window.location = './ticket.html';
+                }
+                
+                // Verificación adicional después de un delay
+                setTimeout(() => {
+                    if (!window.location.href.includes('ticket.html')) {
+                        console.log('🔄 Redirección no detectada, intentando método alternativo...');
+                        window.open('./ticket.html', '_self');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('❌ Error en redirección:', error);
+                // Si falla la redirección, al menos mostrar los datos del ticket aquí
+                alert('Compra realizada exitosamente. Por favor, navegue manualmente a la página del ticket.');
+            }
+        }, 1000); // Reducir a 1 segundo
         
     } catch (error) {
         console.error('❌ Error procesando compra:', error);

@@ -139,36 +139,42 @@ async def login(request: LoginRequest):
 
 @app.get("/movies/all")
 async def get_all_movies():
-    # Devolver siempre estas 3 películas específicas
-    return [
-        {
-            "id": 1, 
-            "title": "Mad Max: Furia en la carretera", 
-            "description": "Una película de acción post-apocalíptica donde Max ayuda a un grupo de mujeres rebeldes a escapar de un tirano en el desierto.",
-            "genre": "Acción", 
-            "duration": 120,
-            "rating": "R",
-            "poster_url": "/poster1.jpg"
-        },
-        {
-            "id": 2, 
-            "title": "Un jefe en pañales", 
-            "description": "Un bebé con traje de ejecutivo llega a casa de una familia y resulta que puede hablar y tiene una misión secreta.",
-            "genre": "Comedia", 
-            "duration": 97,
-            "rating": "PG",
-            "poster_url": "/poster2.jpg"
-        },
-        {
-            "id": 3, 
-            "title": "El conjuro 3", 
-            "description": "Los investigadores paranormales Ed y Lorraine Warren enfrentan uno de los casos más sensacionales de su carrera.",
-            "genre": "Terror", 
-            "duration": 112,
-            "rating": "R",
-            "poster_url": "/poster3.jpg"
-        }
-    ]
+    """Obtener todas las películas de la base de datos real"""
+    connection = get_db_connection()
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        # Consulta exacta para obtener solo las películas que están en la base de datos
+        query = """
+        SELECT 
+            id, 
+            title, 
+            overview as description, 
+            duration_minutes,
+            'Película' as genre,
+            original_language
+        FROM movies 
+        WHERE id IN (2, 12, 13)
+        ORDER BY id
+        """
+        cursor.execute(query)
+        movies = cursor.fetchall()
+        
+        print(f"🎬 Películas reales encontradas: {len(movies)}")
+        for movie in movies:
+            print(f"   - ID: {movie['id']}, Título: {movie['title']}")
+        
+        return movies
+        
+    except Error as e:
+        print(f"❌ Error obteniendo películas: {e}")
+        raise HTTPException(status_code=500, detail="Error consultando películas")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
 @app.get("/theaters/all")  
 async def get_all_theaters():
@@ -199,28 +205,60 @@ async def get_all_theaters():
 
 @app.get("/showtimes/all")
 async def get_all_showtimes():
-    # Devolver horarios fijos para las 3 películas usando IDs reales de la DB
-    from datetime import datetime, timedelta
+    """Obtener todos los horarios de la base de datos real"""
+    connection = get_db_connection()
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
     
-    # Obtener fecha de hoy y mañana en formato string
-    today = datetime.now().strftime("%Y-%m-%d")
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    
-    return [
-        # Horarios para Mad Max (película ID 1) - Usando IDs reales de la DB
-        {"id": 2, "movie_id": 1, "theater_id": 1, "start_time": "14:00", "date": today, "movie_title": "Mad Max: Furia en la carretera", "theater_name": "Sala 1"},
-        {"id": 3, "movie_id": 1, "theater_id": 1, "start_time": "17:00", "date": today, "movie_title": "Mad Max: Furia en la carretera", "theater_name": "Sala 1"},
-        {"id": 4, "movie_id": 1, "theater_id": 2, "start_time": "20:00", "date": today, "movie_title": "Mad Max: Furia en la carretera", "theater_name": "Sala 2"},
+    try:
+        cursor = connection.cursor(dictionary=True)
         
-        # Horarios para Un jefe en pañales (película ID 2)
-        {"id": 5, "movie_id": 2, "theater_id": 2, "start_time": "14:30", "date": today, "movie_title": "Un jefe en pañales", "theater_name": "Sala 2"},
-        {"id": 6, "movie_id": 2, "theater_id": 1, "start_time": "16:30", "date": today, "movie_title": "Un jefe en pañales", "theater_name": "Sala 1"},
-        {"id": 7, "movie_id": 2, "theater_id": 2, "start_time": "19:00", "date": today, "movie_title": "Un jefe en pañales", "theater_name": "Sala 2"},
+        # Consulta que incluye información de la película y teatro - DATOS REALES
+        query = """
+        SELECT 
+            s.showtime_id,
+            s.movie_id,
+            s.theater_id,
+            s.datetime,
+            m.title as movie_title,
+            CONCAT('Sala ', s.theater_id) as theater_name
+        FROM showtimes s
+        INNER JOIN movies m ON s.movie_id = m.id
+        WHERE s.showtime_id IN (4, 5, 8, 9, 10, 11)
+        ORDER BY s.movie_id, s.datetime
+        """
         
-        # Para mañana, reutilizar algunos IDs para simplificar
-        {"id": 2, "movie_id": 3, "theater_id": 1, "start_time": "15:30", "date": tomorrow, "movie_title": "El conjuro 3", "theater_name": "Sala 1"},
-        {"id": 3, "movie_id": 3, "theater_id": 2, "start_time": "18:30", "date": tomorrow, "movie_title": "El conjuro 3", "theater_name": "Sala 2"}
-    ]
+        cursor.execute(query)
+        showtimes = cursor.fetchall()
+        
+        # Convertir datetime a formato que espera el frontend
+        processed_showtimes = []
+        for showtime in showtimes:
+            processed_showtime = {
+                'showtime_id': showtime['showtime_id'],
+                'movie_id': showtime['movie_id'],
+                'theater_id': showtime['theater_id'],
+                'datetime': showtime['datetime'].strftime('%Y-%m-%d %H:%M:%S'),
+                'date': showtime['datetime'].strftime('%Y-%m-%d'),
+                'start_time': showtime['datetime'].strftime('%H:%M'),
+                'movie_title': showtime['movie_title'],
+                'theater_name': showtime['theater_name']
+            }
+            processed_showtimes.append(processed_showtime)
+        
+        print(f"🕒 Horarios reales encontrados: {len(processed_showtimes)}")
+        for showtime in processed_showtimes:
+            print(f"   - ID: {showtime['showtime_id']}, Película: {showtime['movie_title']}, Fecha: {showtime['date']} {showtime['start_time']}")
+        
+        return processed_showtimes
+        
+    except Error as e:
+        print(f"❌ Error obteniendo horarios: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo horarios: {str(e)}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
 @app.get("/reserved_seats/all")
 async def get_reserved_seats():
@@ -466,47 +504,41 @@ async def get_all_sales():
 
 @app.get("/reserved_seats/showtime/{showtime_id}")
 async def get_reserved_seats_by_showtime(showtime_id: int):
+    """Obtener asientos reservados reales para un horario específico"""
+    print(f"🎟️ Obteniendo asientos reservados para showtime_id: {showtime_id}")
+    
     connection = get_db_connection()
     if not connection:
-        return []
+        print("❌ No hay conexión a la base de datos")
+        return {"showtime_id": showtime_id, "reserved_seats": []}
     
     try:
         cursor = connection.cursor(dictionary=True)
-        # Obtener asientos reservados para un showtime específico
-        # JOIN correcto: reserved_seats.sale_id = sales.sale_id
+        # Consulta exacta para obtener asientos reservados reales
         query = """
-        SELECT DISTINCT 
-            rs.reservation_id as id,
-            s.showtime_id,
-            rs.seat_number,
-            rs.sale_id,
-            rs.created_at as reservation_date
+        SELECT DISTINCT rs.seat_number
         FROM reserved_seats rs
         INNER JOIN sales s ON rs.sale_id = s.sale_id
         WHERE s.showtime_id = %s
+        ORDER BY rs.seat_number
         """
         cursor.execute(query, (showtime_id,))
-        seats = cursor.fetchall()
+        seats_data = cursor.fetchall()
         
-        # Agregar información de fila y número parseando seat_number
-        for seat in seats:
-            seat_str = seat['seat_number']
-            if len(seat_str) >= 2:
-                seat['seat_row'] = seat_str[0]  # Primera letra (A, B, C, D)
-                seat['seat_number_parsed'] = seat_str[1:]  # Números después de la letra
-            else:
-                seat['seat_row'] = 'A'
-                seat['seat_number_parsed'] = '1'
+        # Extraer solo los números de asiento
+        reserved_seats = [seat['seat_number'] for seat in seats_data]
         
-        print(f"📋 Asientos reservados para showtime {showtime_id}: {len(seats)} asientos encontrados")
-        for seat in seats:
-            print(f"   🪑 ID: {seat['id']}, Asiento: {seat['seat_number']}, Sale ID: {seat['sale_id']}")
+        print(f"🎟️ Resultados raw de la consulta: {seats_data}")
+        print(f"🎟️ Asientos reservados procesados: {reserved_seats}")
         
-        return seats
+        return {
+            "showtime_id": showtime_id,
+            "reserved_seats": reserved_seats
+        }
         
     except Error as e:
-        print(f"Error getting reserved seats by showtime: {e}")
-        return []
+        print(f"❌ Error obteniendo asientos reservados: {e}")
+        return {"showtime_id": showtime_id, "reserved_seats": []}
     finally:
         if connection.is_connected():
             cursor.close()

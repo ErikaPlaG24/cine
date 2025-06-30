@@ -17,11 +17,9 @@ def current_user_dep(token: str = Depends(oauth2_scheme)):
     return get_current_user(token)
 
 @router.get("/all")
-async def get_all_movies(
-    data: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(current_user_dep)
-):
-    return get_all_movies_controller(data)
+async def get_all_movies():
+    """Obtener todas las películas sin autenticación requerida"""
+    return get_all_movies_controller({})
 
 @router.post("/by_id")
 async def get_movie_by_id(

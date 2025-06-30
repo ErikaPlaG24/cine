@@ -6,6 +6,7 @@ from controllers.reserved_seats.get_reserved_seat_by_id import get_reserved_seat
 from controllers.reserved_seats.create_reserved_seat import create_reserved_seat_controller
 from controllers.reserved_seats.update_reserved_seat_by_id import update_reserved_seat_by_id_controller
 from controllers.reserved_seats.delete_reserved_seat_by_id import delete_reserved_seat_by_id_controller
+from controllers.reserved_seats.get_reserved_seats_by_showtime import get_reserved_seats_by_showtime_controller
 from helpers.token import get_current_user
 
 router = APIRouter()
@@ -16,11 +17,14 @@ def current_user_dep(token: str = Depends(oauth2_scheme)):
     return get_current_user(token)
 
 @router.get("/all")
-async def get_all_reserved_seats(
-    data: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(current_user_dep)
-):
-    return get_all_reserved_seats_controller(data)
+async def get_all_reserved_seats():
+    """Obtener todos los asientos reservados sin autenticación requerida"""
+    return get_all_reserved_seats_controller({})
+
+@router.get("/showtime/{showtime_id}")
+async def get_reserved_seats_by_showtime(showtime_id: int):
+    """Obtener asientos reservados para un horario específico"""
+    return get_reserved_seats_by_showtime_controller(showtime_id)
 
 @router.post("/by_id")
 async def get_reserved_seat_by_id(

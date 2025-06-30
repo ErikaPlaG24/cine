@@ -213,13 +213,15 @@ const ReservedSeatsAPI = {
             
             console.log('📋 RESPUESTA RAW del servidor:', response);
             console.log('📋 Tipo de respuesta:', typeof response);
-            console.log('📋 Es array:', Array.isArray(response));
             
-            const result = Array.isArray(response) ? response : [];
-            console.log('📋 Resultado final (array):', result);
-            console.log('📋 Cantidad de asientos en resultado:', result.length);
-            
-            return result;
+            // El endpoint devuelve {showtime_id: X, reserved_seats: ["A1", "A2"]}
+            if (response && response.reserved_seats && Array.isArray(response.reserved_seats)) {
+                console.log('📋 Asientos reservados encontrados:', response.reserved_seats);
+                return response.reserved_seats;
+            } else {
+                console.log('📋 No se encontraron asientos reservados o formato incorrecto');
+                return [];
+            }
         } catch (error) {
             console.error('❌ ERROR COMPLETO en ReservedSeatsAPI.getByShowtime:', error);
             console.error('❌ Error stack:', error.stack);
@@ -262,7 +264,7 @@ function isAuthenticated() {
 
 // Función para obtener datos del usuario
 function getUserData() {
-    const userData = localStorage.getItem('userData');
+    const userData = localStorage.getItem('cinemaUser');
     return userData ? JSON.parse(userData) : null;
 }
 

@@ -35,7 +35,7 @@
             <!-- Selector de horarios -->
             <div class="form-group">
                 <label for="horarioSeleccion">Horario:</label>
-                <select id="horarioSeleccion" onchange="cargarAsientosReservados()">
+                <select id="horarioSeleccion" onchange="onHorarioChange()">
                     <option value="">Seleccione un horario</option>
                 </select>
             </div>
@@ -66,7 +66,6 @@
     <script src="config.js"></script>
     <script src="api.js"></script>
     <script src="script-reservas.js"></script>
-    <script src="mock.js"></script>
     
     <script>
         // Verificar autenticación al cargar la página

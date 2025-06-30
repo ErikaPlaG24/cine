@@ -27,9 +27,7 @@ def login_controller(data: dict):
         
         # Obtener la contraseña del usuario
         user_password = get_hashed_password_by_id(db, id_user)
-        # Convertir a bytes si es str
-        if isinstance(user_password, str):
-            user_password = user_password.encode('utf-8')
+        # NO convertir a bytes - pasar como string
         
         # Verificar la contraseña
         if not verify_password(password, user_password):

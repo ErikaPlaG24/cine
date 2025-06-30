@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Endpoints</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Endpoints de API</h1>
+    
+    <div class="section">
+        <h2>🎬 Películas</h2>
+        <button onclick="testMovies()">Probar /movies/all</button>
+        <pre id="movies-result">Presiona el botón para probar...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>🕐 Horarios</h2>
+        <button onclick="testShowtimes()">Probar /showtimes/all</button>
+        <pre id="showtimes-result">Presiona el botón para probar...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>🎭 Horarios por Película</h2>
+        <button onclick="testShowtimesByMovie(2)">Horarios para Lilo y Stitch (ID: 2)</button>
+        <button onclick="testShowtimesByMovie(12)">Horarios para Misión Imposible (ID: 12)</button>
+        <button onclick="testShowtimesByMovie(13)">Horarios para K.O. (ID: 13)</button>
+        <pre id="showtimes-by-movie-result">Presiona un botón para probar...</pre>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000';
+
+        async function testMovies() {
+            const resultElement = document.getElementById('movies-result');
+            try {
+                resultElement.innerHTML = 'Cargando...';
+                
+                const response = await fetch(`${API_BASE_URL}/movies/all`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultElement.innerHTML = `<span class="success">✅ Éxito!</span>\n\n${JSON.stringify(data, null, 2)}`;
+                
+                // Mostrar resumen
+                const movies = data.movies || [];
+                console.log(`📊 Se encontraron ${movies.length} películas:`, movies);
+                
+            } catch (error) {
+                resultElement.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                console.error('Error al probar movies:', error);
+            }
+        }
+
+        async function testShowtimes() {
+            const resultElement = document.getElementById('showtimes-result');
+            try {
+                resultElement.innerHTML = 'Cargando...';
+                
+                const response = await fetch(`${API_BASE_URL}/showtimes/all`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultElement.innerHTML = `<span class="success">✅ Éxito!</span>\n\n${JSON.stringify(data, null, 2)}`;
+                
+                // Mostrar resumen
+                const showtimes = data.showtimes || [];
+                console.log(`📊 Se encontraron ${showtimes.length} horarios:`, showtimes);
+                
+                // Agrupar por película
+                const groupedByMovie = {};
+                showtimes.forEach(showtime => {
+                    if (!groupedByMovie[showtime.movie_id]) {
+                        groupedByMovie[showtime.movie_id] = [];
+                    }
+                    groupedByMovie[showtime.movie_id].push(showtime);
+                });
+                
+                console.log('📊 Horarios agrupados por película:', groupedByMovie);
+                
+            } catch (error) {
+                resultElement.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                console.error('Error al probar showtimes:', error);
+            }
+        }
+
+        async function testShowtimesByMovie(movieId) {
+            const resultElement = document.getElementById('showtimes-by-movie-result');
+            try {
+                resultElement.innerHTML = `Cargando horarios para película ${movieId}...`;
+                
+                // Primero obtener todos los horarios
+                const response = await fetch(`${API_BASE_URL}/showtimes/all`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const allShowtimes = data.showtimes || [];
+                
+                // Filtrar por película (simular el comportamiento del frontend)
+                const movieShowtimes = allShowtimes.filter(showtime => showtime.movie_id == movieId);
+                
+                resultElement.innerHTML = `<span class="success">✅ Éxito!</span>\n\nHorarios para película ${movieId}:\n\n${JSON.stringify(movieShowtimes, null, 2)}`;
+                
+                console.log(`📊 Se encontraron ${movieShowtimes.length} horarios para película ${movieId}:`, movieShowtimes);
+                
+            } catch (error) {
+                resultElement.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                console.error(`Error al probar horarios para película ${movieId}:`, error);
+            }
+        }
+
+        // Auto-test al cargar la página
+        window.addEventListener('load', () => {
+            console.log('🧪 Página de pruebas cargada. Probando endpoints automáticamente...');
+            setTimeout(() => {
+                testMovies();
+                setTimeout(() => {
+                    testShowtimes();
+                }, 1000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
