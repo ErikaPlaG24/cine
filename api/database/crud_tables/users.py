@@ -142,6 +142,13 @@ def get_password_updated_at_by_id(db: MySQLConnection, user_id):
     result = db.fetchone()
     return result["password_updated_at"] if result else None
 
+def get_user_by_id(db: MySQLConnection, user_id):
+    """
+    Obtiene un usuario específico por su ID.
+    """
+    db.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    return db.fetchone()
+
 
 
 #             ______   ______       _______       ___       .___________.  _______ 

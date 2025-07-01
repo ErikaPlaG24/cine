@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Session - Sistema de Cine</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; border: 1px solid #ff0000; }
+        .success { background: #e6ffe6; border: 1px solid #00ff00; }
+        pre { background: #f8f8f8; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Debug de Sesión</h1>
+    
+    <div class="info">
+        <h3>1. Contenido de localStorage:</h3>
+        <div id="localStorage-content"></div>
+    </div>
+    
+    <div class="info">
+        <h3>2. Token JWT Analysis:</h3>
+        <div id="token-analysis"></div>
+    </div>
+    
+    <div class="info">
+        <h3>3. Test de funciones de admin:</h3>
+        <div id="admin-functions"></div>
+    </div>
+    
+    <button onclick="clearAll()">Limpiar Todo localStorage</button>
+    <button onclick="goToLogin()">Ir a Login</button>
+    <button onclick="goToAdmin()">Ir a Admin</button>
+    
+    <script>
+        function showLocalStorage() {
+            const content = document.getElementById('localStorage-content');
+            let html = '<h4>Todas las claves en localStorage:</h4>';
+            
+            if (localStorage.length === 0) {
+                html += '<p style="color: red;">localStorage está vacío</p>';
+            } else {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    html += `<p><strong>${key}:</strong></p>`;
+                    html += `<pre>${value}</pre>`;
+                }
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        function analyzeToken() {
+            const content = document.getElementById('token-analysis');
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                content.innerHTML = '<p style="color: red;">❌ No hay token en localStorage</p>';
+                return;
+            }
+            
+            let html = `<p style="color: green;">✅ Token encontrado</p>`;
+            html += `<p><strong>Longitud:</strong> ${token.length}</p>`;
+            html += `<p><strong>Primeros 50 chars:</strong> ${token.substring(0, 50)}...</p>`;
+            
+            // Verificar si es JWT
+            const parts = token.split('.');
+            html += `<p><strong>Partes del JWT:</strong> ${parts.length}</p>`;
+            
+            if (parts.length === 3) {
+                try {
+                    const header = JSON.parse(atob(parts[0]));
+                    const payload = JSON.parse(atob(parts[1]));
+                    
+                    html += '<p style="color: green;">✅ JWT válido</p>';
+                    html += '<h5>Header:</h5>';
+                    html += `<pre>${JSON.stringify(header, null, 2)}</pre>`;
+                    html += '<h5>Payload:</h5>';
+                    html += `<pre>${JSON.stringify(payload, null, 2)}</pre>`;
+                    
+                    // Verificar expiración
+                    if (payload.exp) {
+                        const now = Date.now() / 1000;
+                        const expired = payload.exp < now;
+                        html += `<p><strong>Expira:</strong> ${new Date(payload.exp * 1000).toLocaleString()}</p>`;
+                        html += `<p><strong>Expirado:</strong> ${expired ? '❌ SÍ' : '✅ NO'}</p>`;
+                    }
+                    
+                } catch (error) {
+                    html += `<p style="color: red;">❌ Error decodificando JWT: ${error.message}</p>`;
+                }
+            } else {
+                html += '<p style="color: red;">❌ No es un JWT válido</p>';
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        function testAdminFunctions() {
+            const content = document.getElementById('admin-functions');
+            const token = localStorage.getItem('authToken');
+            
+            let html = '<h4>Test de funciones:</h4>';
+            
+            // Test 1: Token existe
+            html += `<p>1. Token existe: ${token ? '✅' : '❌'}</p>`;
+            
+            if (token) {
+                // Test 2: Token format
+                const parts = token.split('.');
+                html += `<p>2. Formato JWT: ${parts.length === 3 ? '✅' : '❌'}</p>`;
+                
+                if (parts.length === 3) {
+                    try {
+                        // Test 3: Payload parseable
+                        const payload = JSON.parse(atob(parts[1]));
+                        html += `<p>3. Payload parseable: ✅</p>`;
+                        
+                        // Test 4: Required fields
+                        const hasUsername = !!payload.username;
+                        const hasRole = !!payload.role;
+                        html += `<p>4. Tiene username: ${hasUsername ? '✅' : '❌'}</p>`;
+                        html += `<p>5. Tiene role: ${hasRole ? '✅' : '❌'}</p>`;
+                        
+                        if (hasRole) {
+                            html += `<p>6. Rol: ${payload.role}</p>`;
+                            html += `<p>7. Es admin: ${payload.role === 'admin' ? '✅' : '❌'}</p>`;
+                        }
+                        
+                        // Test 5: Expiration
+                        if (payload.exp) {
+                            const now = Date.now() / 1000;
+                            const expired = payload.exp < now;
+                            html += `<p>8. Token expirado: ${expired ? '❌ SÍ' : '✅ NO'}</p>`;
+                        }
+                        
+                    } catch (error) {
+                        html += `<p>3. Payload parseable: ❌ (${error.message})</p>`;
+                    }
+                }
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        function clearAll() {
+            localStorage.clear();
+            location.reload();
+        }
+        
+        function goToLogin() {
+            window.location.href = 'login.html';
+        }
+        
+        function goToAdmin() {
+            window.location.href = 'admin.html';
+        }
+        
+        // Ejecutar tests al cargar
+        window.onload = function() {
+            showLocalStorage();
+            analyzeToken();
+            testAdminFunctions();
+        };
+    </script>
+</body>
+</html>

@@ -7,18 +7,7 @@
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body> 
-    <!-- Header con navegación -->
-    <header style="background: #667eea; color: white; padding: 15px; margin-bottom: 20px; border-radius: 0 0 10px 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
-            <h1 style="margin: 0; font-size: 24px;">🎬 Cine Premium</h1>
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <span id="welcomeMessage" style="font-size: 16px;">Bienvenido</span>
-                <button onclick="cerrarSesion()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
-                    <span aria-label="salir" title="Cerrar Sesión">🚪</span> Cerrar Sesión
-                </button>
-            </div>
-        </div>
-    </header>
+    <!-- La navegación se inserta automáticamente aquí -->
 
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
         <div id="salas">
@@ -61,10 +50,16 @@
                 </button>
             </div>
         </div>
+        
+       
+            </div>
+        </div>
     </div>
 
     <script src="config.js"></script>
     <script src="api.js"></script>
+    <!-- Navegación unificada (después de api.js) -->
+    <script src="navigation.js"></script>
     <script src="script-reservas.js"></script>
     
     <script>
@@ -73,12 +68,6 @@
             if (!isAuthenticated()) {
                 window.location.href = 'login.html';
                 return;
-            }
-            
-            // Mostrar nombre del usuario
-            const userData = getUserData();
-            if (userData) {
-                document.getElementById('welcomeMessage').textContent = `Bienvenido, ${userData.username}`;
             }
             
             // Cargar datos iniciales
@@ -98,12 +87,6 @@
             console.log('🔍 Ventana enfocada, actualizando datos...');
             forzarRecargaDatos();
         });
-
-        function cerrarSesion() {
-            AuthAPI.logout();
-            localStorage.removeItem('cinemaUser');
-            window.location.href = 'login.html';
-        }
     </script>
 </body>
 </html>

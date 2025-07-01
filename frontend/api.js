@@ -37,7 +37,20 @@ async function apiRequest(endpoint, options = {}) {
             let errorMessage = `HTTP ${response.status}`;
             try {
                 const errorData = await response.json();
-                errorMessage = errorData.detail || errorData.message || errorMessage;
+                if (errorData) {
+                    // Manejar diferentes formatos de error
+                    if (typeof errorData.detail === 'object') {
+                        if (errorData.detail.missing_fields) {
+                            errorMessage = `Faltan campos requeridos: ${errorData.detail.missing_fields.join(', ')}`;
+                        } else if (errorData.detail.error) {
+                            errorMessage = errorData.detail.error;
+                        } else {
+                            errorMessage = JSON.stringify(errorData.detail);
+                        }
+                    } else {
+                        errorMessage = errorData.detail || errorData.message || errorMessage;
+                    }
+                }
             } catch (e) {
                 // Si no se puede parsear el JSON del error, usar el status
                 errorMessage = `HTTP ${response.status} - ${response.statusText}`;
@@ -93,8 +106,20 @@ const AuthAPI = {
             if (data && data.access_token) {
                 authToken = data.access_token;
                 localStorage.setItem('authToken', authToken);
-                localStorage.setItem('userData', JSON.stringify(data.user || {}));
-                console.log('Token saved successfully');
+                
+                // Guardar datos del usuario incluyendo el rol
+                const userData = data.user || {};
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                // También guardar en el formato legacy para compatibilidad
+                localStorage.setItem('cinemaUser', JSON.stringify({
+                    username: userData.username,
+                    token: authToken,
+                    role: userData.role
+                }));
+                
+                console.log('Token y datos de usuario guardados exitosamente');
+                console.log('Datos del usuario:', userData);
             } else {
                 console.error('No access_token in response:', data);
             }
@@ -128,61 +153,261 @@ const AuthAPI = {
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('userData');
+        localStorage.removeItem('cinemaUser');
     }
 };
 
-// Funciones para películas
+// Funciones CRUD para usuarios
+const UsersAPI = {
+    async getAll() {
+        console.log('👥 UsersAPI.getAll - Obteniendo todos los usuarios');
+        try {
+            const response = await apiRequest('/users/all', {
+                method: 'GET'
+            });
+            console.log('👥 Usuarios obtenidos:', response);
+            
+            // El backend puede devolver directamente un array o un objeto con propiedad 'users'
+            if (Array.isArray(response)) {
+                return response;
+            } else {
+                return response.users || [];
+            }
+        } catch (error) {
+            console.error('❌ Error obteniendo usuarios:', error);
+            throw error;
+        }
+    },
+
+    async getById(userId) {
+        console.log('👤 UsersAPI.getById - Obteniendo usuario:', userId);
+        try {
+            const response = await apiRequest('/users/by_id', {
+                method: 'POST',
+                body: JSON.stringify({ user_id: userId })
+            });
+            console.log('👤 Usuario obtenido:', response);
+            return response.user;
+        } catch (error) {
+            console.error('❌ Error obteniendo usuario:', error);
+            throw error;
+        }
+    },
+
+    async create(userData) {
+        console.log('➕ UsersAPI.create - Creando usuario:', userData);
+        try {
+            const response = await apiRequest('/users/create', {
+                method: 'POST',
+                body: JSON.stringify(userData)
+            });
+            console.log('✅ Usuario creado:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error creando usuario:', error);
+            throw error;
+        }
+    },
+
+    async update(userId, userData) {
+        console.log('✏️ UsersAPI.update - Actualizando usuario:', userId, userData);
+        try {
+            const response = await apiRequest('/users/update', {
+                method: 'PUT',
+                body: JSON.stringify({ user_id: userId, ...userData })
+            });
+            console.log('✅ Usuario actualizado:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error actualizando usuario:', error);
+            throw error;
+        }
+    },
+
+    async delete(userId) {
+        console.log('🗑️ UsersAPI.delete - Eliminando usuario:', userId);
+        try {
+            const response = await apiRequest('/users/delete', {
+                method: 'DELETE',
+                body: JSON.stringify({ user_id: userId })
+            });
+            console.log('✅ Usuario eliminado:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error eliminando usuario:', error);
+            throw error;
+        }
+    }
+};
+
+// Funciones CRUD para películas
 const MoviesAPI = {
     async getAll() {
-        return await apiRequest('/movies/all', {
-            method: 'GET'
-        });
+        console.log('🎬 MoviesAPI.getAll - Obteniendo todas las películas');
+        try {
+            const response = await apiRequest('/movies/all', {
+                method: 'GET'
+            });
+            console.log('🎬 Películas obtenidas:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error obteniendo películas:', error);
+            throw error;
+        }
     },
 
-    async getById(id) {
-        return await apiRequest('/movies/by_id', {
-            method: 'POST',
-            body: JSON.stringify({ id })
-        });
+    async getById(movieId) {
+        console.log('🎭 MoviesAPI.getById - Obteniendo película:', movieId);
+        try {
+            const response = await apiRequest('/movies/by_id', {
+                method: 'POST',
+                body: JSON.stringify({ movie_id: movieId })
+            });
+            console.log('🎭 Película obtenida:', response);
+            return response.movie;
+        } catch (error) {
+            console.error('❌ Error obteniendo película:', error);
+            throw error;
+        }
     },
 
-    async search(query) {
-        return await apiRequest('/movies/search', {
-            method: 'POST',
-            body: JSON.stringify({ query })
-        });
+    async create(movieData) {
+        console.log('➕ MoviesAPI.create - Creando película:', movieData);
+        try {
+            const response = await apiRequest('/movies/create', {
+                method: 'POST',
+                body: JSON.stringify(movieData)
+            });
+            console.log('✅ Película creada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error creando película:', error);
+            throw error;
+        }
+    },
+
+    async update(movieId, movieData) {
+        console.log('✏️ MoviesAPI.update - Actualizando película:', movieId, movieData);
+        try {
+            const response = await apiRequest('/movies/update', {
+                method: 'PUT',
+                body: JSON.stringify({ movie_id: movieId, ...movieData })
+            });
+            console.log('✅ Película actualizada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error actualizando película:', error);
+            throw error;
+        }
+    },
+
+    async delete(movieId) {
+        console.log('🗑️ MoviesAPI.delete - Eliminando película:', movieId);
+        try {
+            const response = await apiRequest('/movies/delete', {
+                method: 'DELETE',
+                body: JSON.stringify({ movie_id: movieId })
+            });
+            console.log('✅ Película eliminada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error eliminando película:', error);
+            throw error;
+        }
     }
 };
 
-// Funciones para salas/teatros
-const TheatersAPI = {
-    async getAll() {
-        return await apiRequest('/theaters/all', {
-            method: 'GET'
-        });
-    },
-
-    async getById(id) {
-        return await apiRequest('/theaters/by_id', {
-            method: 'POST',
-            body: JSON.stringify({ id })
-        });
-    }
-};
-
-// Funciones para horarios
+// Funciones CRUD para funciones (showtimes)
 const ShowtimesAPI = {
     async getAll() {
-        return await apiRequest('/showtimes/all', {
-            method: 'GET'
-        });
+        console.log('📅 ShowtimesAPI.getAll - Obteniendo todas las funciones');
+        try {
+            const response = await apiRequest('/showtimes/all', {
+                method: 'GET'
+            });
+            console.log('📅 Funciones obtenidas:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error obteniendo funciones:', error);
+            throw error;
+        }
     },
 
-    async getById(id) {
-        return await apiRequest('/showtimes/by_id', {
-            method: 'POST',
-            body: JSON.stringify({ id })
-        });
+    async getById(showtimeId) {
+        console.log('📅 ShowtimesAPI.getById - Obteniendo función:', showtimeId);
+        try {
+            const response = await apiRequest('/showtimes/by_id', {
+                method: 'POST',
+                body: JSON.stringify({ showtime_id: showtimeId })
+            });
+            console.log('📅 Función obtenida:', response);
+            return response.showtime;
+        } catch (error) {
+            console.error('❌ Error obteniendo función:', error);
+            throw error;
+        }
+    },
+
+    async create(showtimeData) {
+        console.log('➕ ShowtimesAPI.create - Creando función:', showtimeData);
+        try {
+            const response = await apiRequest('/showtimes/create', {
+                method: 'POST',
+                body: JSON.stringify(showtimeData)
+            });
+            console.log('✅ Función creada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error creando función:', error);
+            throw error;
+        }
+    },
+
+    async update(showtimeId, showtimeData) {
+        console.log('✏️ ShowtimesAPI.update - Actualizando función:', showtimeId, showtimeData);
+        try {
+            const response = await apiRequest('/showtimes/update', {
+                method: 'PUT',
+                body: JSON.stringify({ showtime_id: showtimeId, ...showtimeData })
+            });
+            console.log('✅ Función actualizada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error actualizando función:', error);
+            throw error;
+        }
+    },
+
+    async delete(showtimeId) {
+        console.log('🗑️ ShowtimesAPI.delete - Eliminando función:', showtimeId);
+        try {
+            const response = await apiRequest('/showtimes/delete', {
+                method: 'DELETE',
+                body: JSON.stringify({ showtime_id: showtimeId })
+            });
+            console.log('✅ Función eliminada:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error eliminando función:', error);
+            throw error;
+        }
+    }
+};
+
+// Funciones para teatros/salas
+const TheatersAPI = {
+    async getAll() {
+        console.log('🏛️ TheatersAPI.getAll - Obteniendo todas las salas');
+        try {
+            const response = await apiRequest('/theaters/all', {
+                method: 'GET'
+            });
+            console.log('🏛️ Salas obtenidas:', response);
+            return response.theaters || [];
+        } catch (error) {
+            console.error('❌ Error obteniendo salas:', error);
+            throw error;
+        }
     }
 };
 
@@ -253,13 +478,50 @@ const SalesAPI = {
     }
 };
 
+// Funciones para reportes administrativos
+const ReportsAPI = {
+    async getSalesSummary() {
+        console.log('📊 ReportsAPI.getSalesSummary - Obteniendo resumen de ventas');
+        try {
+            const response = await apiRequest('/reports/sales-summary', {
+                method: 'GET'
+            });
+            console.log('📊 Resumen de ventas obtenido:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error obteniendo resumen de ventas:', error);
+            throw error;
+        }
+    },
+
+    async getDetailedSales() {
+        console.log('📋 ReportsAPI.getDetailedSales - Obteniendo ventas detalladas');
+        try {
+            const response = await apiRequest('/reports/detailed-sales', {
+                method: 'GET'
+            });
+            console.log('📋 Ventas detalladas obtenidas:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error obteniendo ventas detalladas:', error);
+            throw error;
+        }
+    }
+};
+
 // Función para verificar si el token está válido
 function isAuthenticated() {
-    // Verificar tanto authToken como el localStorage
+    // Verificar token en localStorage
+    const authToken = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('cinemaUser');
-    const hasToken = !!authToken || (storedUser && JSON.parse(storedUser).token);
-    console.log('isAuthenticated check:', { authToken: !!authToken, storedUser: !!storedUser, hasToken });
-    return hasToken;
+    
+    console.log('isAuthenticated check:', { 
+        authToken: !!authToken, 
+        storedUser: !!storedUser,
+        hasValidToken: !!(authToken || (storedUser && JSON.parse(storedUser).token))
+    });
+    
+    return !!(authToken || (storedUser && JSON.parse(storedUser).token));
 }
 
 // Función para obtener datos del usuario

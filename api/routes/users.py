@@ -6,6 +6,7 @@ from controllers.users.get_all_actived_users import get_all_active_users_control
 from controllers.users.get_if_user_is_active_by_id import get_if_user_is_active_by_id_controller
 from controllers.users.get_id_by_username import get_id_by_username_controller
 from controllers.users.get_value_from_user_by_id import get_value_from_user_by_id_controller
+from controllers.users.get_user_by_id import get_user_by_id_controller
 from controllers.users.search_user_by_name import search_user_by_name_controller
 from controllers.users.get_if_user_exists import get_if_user_exists_controller
 from controllers.users.create_user import create_user_controller
@@ -22,17 +23,15 @@ def current_user_dep(token: str = Depends(oauth2_scheme)):
 
 @router.get("/all")
 async def get_all_users(
-    data: Dict[str, Any] = Body(...),
     current_user: dict = Depends(current_user_dep)
 ):
-    return get_all_users_controller(data)
+    return get_all_users_controller({"roles": "all"})
 
 @router.get("/all_active")
 async def get_all_active_users(
-    data: Dict[str, Any] = Body(...),
     current_user: dict = Depends(current_user_dep)
 ):
-    return get_all_active_users_controller(data)
+    return get_all_active_users_controller({"roles": "all"})
 
 @router.post("/is_active")
 async def is_user_active(
@@ -89,3 +88,10 @@ async def delete_user_by_id_route(
     current_user: dict = Depends(current_user_dep)
 ):
     return delete_user_by_id_controller(data)
+
+@router.post("/by_id")
+async def get_user_by_id_route(
+    data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(current_user_dep)
+):
+    return get_user_by_id_controller(data)

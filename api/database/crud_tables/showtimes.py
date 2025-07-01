@@ -1,11 +1,31 @@
 from database.mysql_connection import MySQLConnection
 
 def get_all_showtimes(db: MySQLConnection):
-    db.execute("SELECT * FROM showtimes")
+    query = """
+        SELECT 
+            s.*,
+            m.title as movie_title,
+            t.name as theater_name
+        FROM showtimes s
+        LEFT JOIN movies m ON s.movie_id = m.id
+        LEFT JOIN theaters t ON s.theater_id = t.theater_id
+        ORDER BY s.datetime DESC
+    """
+    db.execute(query)
     return db.fetchall()
 
 def get_showtime_by_id(db: MySQLConnection, showtime_id):
-    db.execute("SELECT * FROM showtimes WHERE showtime_id = %s", (showtime_id,))
+    query = """
+        SELECT 
+            s.*,
+            m.title as movie_title,
+            t.name as theater_name
+        FROM showtimes s
+        LEFT JOIN movies m ON s.movie_id = m.id
+        LEFT JOIN theaters t ON s.theater_id = t.theater_id
+        WHERE s.showtime_id = %s
+    """
+    db.execute(query, (showtime_id,))
     return db.fetchone()
 
 def create_showtime(db: MySQLConnection, **kwargs):

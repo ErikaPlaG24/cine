@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test - Sistema de Cine</title>
+    <script src="config.js"></script>
+</head>
+<body>
+    <h1>Test de Login</h1>
+    <button onclick="doLogin()">Login como Isaura (Admin)</button>
+    <button onclick="checkToken()">Verificar Token</button>
+    <button onclick="goToAdmin()">Ir a Admin</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function doLogin() {
+            const result = document.getElementById('result');
+            
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'Isaura',
+                        password: '123456'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('authToken', data.access_token);
+                    result.innerHTML = `<p style="color: green;">✅ Login exitoso! Token guardado.</p>`;
+                    console.log('Token guardado:', data.access_token);
+                } else {
+                    const error = await response.text();
+                    result.innerHTML = `<p style="color: red;">❌ Error en login: ${error}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        function checkToken() {
+            const token = localStorage.getItem('authToken');
+            const result = document.getElementById('result');
+            
+            if (!token) {
+                result.innerHTML = `<p style="color: red;">❌ No hay token en localStorage</p>`;
+                return;
+            }
+            
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    result.innerHTML = `<p style="color: red;">❌ Token no es JWT válido</p>`;
+                    return;
+                }
+                
+                const payload = JSON.parse(atob(parts[1]));
+                result.innerHTML = `<p style="color: green;">✅ Token válido:<br>Usuario: ${payload.username}<br>Rol: ${payload.role}</p>`;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Error decodificando token: ${error.message}</p>`;
+            }
+        }
+        
+        function goToAdmin() {
+            window.location.href = 'admin.html';
+        }
+    </script>
+</body>
+</html>

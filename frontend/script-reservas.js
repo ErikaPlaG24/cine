@@ -8,7 +8,9 @@ let asientosReservadosData = [];
 const asientosSeleccionados = {
   1: new Set(),
   2: new Set(),
-  3: new Set()
+  3: new Set(),
+  4: new Set(),
+  5: new Set()
 };
 
 // Flag para prevenir eventos automáticos durante limpieza
@@ -155,6 +157,9 @@ async function cargarDatosIniciales() {
             nombreUsuario = userData.username;
             currentUser = userData.user || { username: userData.username };
         }
+        
+        // Mostrar características de administrador si aplica
+        toggleAdminFeatures();
         
         await cargarPeliculas();
         // Verificar y corregir cualquier inconsistencia entre película y horario seleccionados
@@ -436,7 +441,7 @@ function generarAsientos() {
     const cont = document.getElementById("asientosContainer");
     cont.innerHTML = "";
     
-    const filas = ["A", "B", "C", "D"];
+    const filas = ["A", "B", "C", "D", "E", "F"];
     const sala = document.getElementById("salaSeleccion").value;
     const horarioId = document.getElementById("horarioSeleccion").value;
     
@@ -468,7 +473,7 @@ function generarAsientos() {
         const filaDiv = document.createElement("div");
         filaDiv.style.cssText = "display: flex; justify-content: center; margin-bottom: 10px; gap: 5px;";
         
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= 10; i++) {
             const idAsiento = `${fila}${i}`;
             const div = document.createElement("div");
             div.className = "asiento";
@@ -751,3 +756,213 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar datos iniciales
     cargarPeliculas();
 });
+
+// Función para verificar si el usuario es administrador
+function isUserAdmin() {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return false;
+        
+        // Decodificar el token JWT
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.role === 'admin';
+    } catch (error) {
+        console.error('Error verificando rol de administrador:', error);
+        return false;
+    }
+}
+
+// Función para mostrar/ocultar enlaces de administrador
+function toggleAdminFeatures() {
+    const adminReportsLink = document.getElementById('adminReportsLink');
+    const adminPanelLink = document.getElementById('adminPanelLink');
+    
+    if (isUserAdmin()) {
+        if (adminReportsLink) {
+            adminReportsLink.style.display = 'inline-block';
+        }
+        if (adminPanelLink) {
+            adminPanelLink.style.display = 'inline-block';
+        }
+        console.log('✅ Usuario administrador detectado, mostrando enlaces de administración');
+    } else {
+        if (adminReportsLink) {
+            adminReportsLink.style.display = 'none';
+        }
+        if (adminPanelLink) {
+            adminPanelLink.style.display = 'none';
+        }
+        console.log('ℹ️ Usuario regular, ocultando enlaces de administración');
+    }
+}
+
+// Función para mostrar/ocultar características de administrador
+async function toggleAdminFeatures() {
+    console.log('🔐 Verificando permisos de administrador...');
+    
+    try {
+        // Obtener datos del usuario del token
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.log('❌ No hay token disponible');
+            return;
+        }
+
+        let userRole = 'customer'; // Valor por defecto
+        
+        // Intentar decodificar como JWT primero
+        try {
+            if (token.includes('.')) {
+                // Es un JWT, intentar decodificar
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                console.log('🔍 Payload del JWT:', payload);
+                userRole = payload.role || 'customer';
+            } else {
+                // Es un token de prueba, verificar si es de admin
+                console.log('🔍 Token de prueba detectado:', token);
+                
+                // Obtener datos del usuario guardados
+                const userData = localStorage.getItem('userData');
+                if (userData) {
+                    const parsedUserData = JSON.parse(userData);
+                    userRole = parsedUserData.role || 'customer';
+                    console.log('🔍 Datos de usuario desde localStorage:', parsedUserData);
+                } else {
+                    // Como fallback, verificar en la base de datos el rol del usuario actual
+                    const storedUser = localStorage.getItem('cinemaUser');
+                    if (storedUser) {
+                        const user = JSON.parse(storedUser);
+                        // Para usuarios específicos conocidos, asignar rol admin
+                        if (user.username === 'admin' || user.username === 'Isaura') {
+                            userRole = 'admin';
+                        }
+                    }
+                }
+            }
+        } catch (decodeError) {
+            console.warn('⚠️ Error decodificando token:', decodeError);
+            
+            // Fallback: verificar usuarios admin conocidos
+            const storedUser = localStorage.getItem('cinemaUser');
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                if (user.username === 'admin' || user.username === 'Isaura') {
+                    userRole = 'admin';
+                }
+            }
+        }
+        
+        console.log('👤 Rol del usuario determinado:', userRole);
+        
+        // Mostrar características de admin si el usuario es administrador
+        const adminReportsLink = document.getElementById('adminReportsLink');
+        const adminPanelLink = document.getElementById('adminPanelLink');
+        const adminSection = document.getElementById('adminSection');
+        
+        if (userRole === 'admin') {
+            if (adminReportsLink) {
+                adminReportsLink.style.display = 'inline-block';
+            }
+            if (adminPanelLink) {
+                adminPanelLink.style.display = 'inline-block';
+            }
+            if (adminSection) {
+                adminSection.style.display = 'block';
+            }
+            console.log('✅ Características de administrador activadas');
+        } else {
+            if (adminReportsLink) {
+                adminReportsLink.style.display = 'none';
+            }
+            if (adminPanelLink) {
+                adminPanelLink.style.display = 'none';
+            }
+            if (adminSection) {
+                adminSection.style.display = 'none';
+            }
+            console.log('❌ Usuario no es administrador');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error verificando permisos de admin:', error);
+    }
+}
+
+toggleAdminFeatures();
+
+// Función para mostrar estadísticas rápidas en el panel de admin
+async function showQuickStats() {
+    console.log('📊 Mostrando estadísticas rápidas...');
+    
+    const quickStats = document.getElementById('quickStats');
+    const quickStatsContent = document.getElementById('quickStatsContent');
+    
+    if (!quickStats || !quickStatsContent) {
+        console.error('❌ Elementos de estadísticas no encontrados');
+        return;
+    }
+    
+    // Mostrar indicador de carga
+    quickStatsContent.innerHTML = '<div style="text-align: center; padding: 20px; color: white;">🔄 Cargando estadísticas...</div>';
+    quickStats.style.display = 'block';
+    
+    try {
+        // Cargar resumen de ventas
+        const response = await ReportsAPI.getSalesSummary();
+        console.log('📊 Estadísticas recibidas:', response);
+        
+        // Procesar datos
+        const summary = response.summary || {};
+        const totalSales = summary.total_sales || 0;
+        const totalAmount = summary.total_amount || 0;
+        const uniqueCustomers = summary.unique_customers || 0;
+        const mostSoldMovie = response.top_movies?.most_sold || { title: 'N/A', tickets_sold: 0 };
+        
+        // Mostrar estadísticas
+        quickStatsContent.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: white;">
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">${totalSales}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Ventas Totales</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">$${totalAmount.toLocaleString()}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Ingresos</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">${uniqueCustomers}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Clientes</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">${mostSoldMovie.title}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Película más vendida (${mostSoldMovie.tickets_sold} boletos)</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button onclick="hideQuickStats()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                    Ocultar
+                </button>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        quickStatsContent.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: white;">
+                ❌ Error al cargar estadísticas: ${error.message}
+                <br><br>
+                <button onclick="hideQuickStats()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                    Cerrar
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Función para ocultar estadísticas rápidas
+function hideQuickStats() {
+    const quickStats = document.getElementById('quickStats');
+    if (quickStats) {
+        quickStats.style.display = 'none';
+    }
+}

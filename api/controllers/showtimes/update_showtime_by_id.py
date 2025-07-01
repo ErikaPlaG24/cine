@@ -13,8 +13,8 @@ def update_showtime_by_id_controller(data: dict):
         
         showtime_id = data.pop("showtime_id")
         
-        # Campos válidos que se pueden actualizar
-        valid_fields = ["movie_id", "theater_id", "showtime", "price"]
+        # Campos válidos que se pueden actualizar (usando los nombres correctos de la BD)
+        valid_fields = ["movie_id", "theater_id", "datetime", "base_price", "available_seats", "is_3d", "is_imax"]
         update_data = {k: v for k, v in data.items() if k in valid_fields and v is not None}
         
         if not update_data:

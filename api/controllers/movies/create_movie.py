@@ -5,7 +5,9 @@ import traceback
 def create_movie_controller(data: dict):
     db = MySQLConnection()
     try:
-        required_fields = ["title", "original_title", "overview", "release_date", "runtime", "popularity", "vote_average", "vote_count", "poster_path", "backdrop_path"]
+        required_fields = ["title"]  # Solo título es realmente obligatorio
+        optional_fields = ["original_title", "overview", "release_date", "duration_minutes", "poster_url", "wallpaper_url"]
+        
         missing_fields = [
             field for field in required_fields
             if field not in data or data.get(field) is None or data.get(field) == ""
@@ -19,8 +21,23 @@ def create_movie_controller(data: dict):
                 }
             )
         
-        # Crear película con todos los campos recibidos
-        movie_data = {k: v for k, v in data.items() if k in required_fields}
+        # Mapear los campos del frontend a los de la base de datos
+        movie_data = {}
+        if data.get("title"):
+            movie_data["title"] = data["title"]
+        if data.get("original_title"):
+            movie_data["original_title"] = data["original_title"]
+        if data.get("overview"):
+            movie_data["overview"] = data["overview"]
+        if data.get("release_date"):
+            movie_data["release_date"] = data["release_date"]
+        if data.get("duration_minutes"):
+            movie_data["duration_minutes"] = data["duration_minutes"]
+        if data.get("poster_url"):
+            movie_data["poster_url"] = data["poster_url"]
+        if data.get("wallpaper_url"):
+            movie_data["wallpaper_url"] = data["wallpaper_url"]
+        
         create_movie(db, **movie_data)
         
         return {"message": "Película creada exitosamente."}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Automático - Sistema de Cine</title>
+    <script src="config.js"></script>
+</head>
+<body>
+    <h1>Login Automático</h1>
+    <p>Haciendo login automático con Isaura...</p>
+    <div id="status">Iniciando...</div>
+    
+    <script>
+        async function autoLogin() {
+            const status = document.getElementById('status');
+            
+            try {
+                status.innerHTML = '🔄 Haciendo login...';
+                
+                const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'Isaura',
+                        password: '123456'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('authToken', data.access_token);
+                    
+                    status.innerHTML = '✅ Login exitoso! Redirigiendo a administración...';
+                    console.log('Token guardado:', data.access_token);
+                    
+                    // Esperar 2 segundos y redirigir
+                    setTimeout(() => {
+                        window.location.href = 'admin.html';
+                    }, 2000);
+                } else {
+                    const error = await response.text();
+                    status.innerHTML = `❌ Error en login: ${error}`;
+                }
+            } catch (error) {
+                status.innerHTML = `❌ Error: ${error.message}`;
+                console.error('Error en login automático:', error);
+            }
+        }
+        
+        // Ejecutar login automático al cargar la página
+        window.onload = autoLogin;
+    </script>
+</body>
+</html>

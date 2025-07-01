@@ -28,6 +28,10 @@ services:
       - cine-mysql
     environment:
       - MYSQL_HOST=cine-mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_DATABASE=cine
       - JWT_SECRET_KEY=mi_clave_secreta_super_segura_para_jwt_tokens_2024
       - JWT_REFRESH_SECRET_KEY=mi_clave_secreta_para_refresh_tokens_2024
     networks:

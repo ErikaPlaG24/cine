@@ -13,8 +13,8 @@ def update_movie_by_id_controller(data: dict):
         
         movie_id = data.pop("movie_id")
         
-        # Campos válidos que se pueden actualizar
-        valid_fields = ["title", "original_title", "overview", "release_date", "runtime", "popularity", "vote_average", "vote_count", "poster_path", "backdrop_path"]
+        # Campos válidos que se pueden actualizar (usando los nombres correctos de la BD)
+        valid_fields = ["title", "original_title", "overview", "release_date", "duration_minutes", "poster_url", "wallpaper_url"]
         update_data = {k: v for k, v in data.items() if k in valid_fields and v is not None}
         
         if not update_data:

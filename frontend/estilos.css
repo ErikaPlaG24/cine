@@ -151,19 +151,19 @@ body::before {
 
 /* ASIENTOS CON EFECTO Y AZUL */
 .asiento {
-    width: 34px;
-    height: 34px;
-    margin: 6px 4px;
+    width: 28px;
+    height: 28px;
+    margin: 4px 3px;
     display: inline-block;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(33,150,243,0.08);
     border: 2px solid transparent;
     transition: transform 0.12s, box-shadow 0.15s, border 0.15s;
     position: relative;
-    font-size: 11px;
+    font-size: 9px;
     text-align: center;
-    line-height: 30px;
+    line-height: 24px;
     font-weight: 600;
 }
 .asiento:hover:not(.ocupado) {

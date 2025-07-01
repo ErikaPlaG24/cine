@@ -103,11 +103,17 @@ async def login(request: LoginRequest):
                 "user": {
                     "id": 1,
                     "username": request.username,
-                    "name": f"{request.username} User"
+                    "name": f"{request.username} User",
+                    "role": "admin" if request.username in ["admin", "Isaura"] else "customer"
                 }
             }
             print(f"✅ Response created: {response}")
             return response
+        
+        # Obtener el rol del usuario de la base de datos
+        cursor.execute("SELECT role FROM users WHERE user_id = %s", (user['user_id'],))
+        role_result = cursor.fetchone()
+        user_role = role_result['role'] if role_result else 'customer'
         
         # Por simplicidad, aceptar cualquier contraseña en desarrollo
         response = {
@@ -116,7 +122,8 @@ async def login(request: LoginRequest):
             "user": {
                 "id": user['user_id'],
                 "username": user['username'],
-                "name": f"{user['first_name']} {user['last_name']}"
+                "name": f"{user['first_name']} {user['last_name']}",
+                "role": user_role
             }
         }
         print(f"✅ User found, response created: {response}")
@@ -544,6 +551,191 @@ async def get_reserved_seats_by_showtime(showtime_id: int):
             cursor.close()
             connection.close()
 
+# Endpoints de reportes para administradores
+@app.get("/reports/sales-summary")
+async def get_sales_summary():
+    """Obtener resumen completo de ventas para administradores"""
+    connection = get_db_connection()
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # a) Total de ventas realizadas
+        cursor.execute("SELECT COUNT(*) as total_sales, COALESCE(SUM(total), 0) as total_amount FROM sales")
+        sales_total = cursor.fetchone()
+        
+        # b) Número de clientes atendidos
+        cursor.execute("SELECT COUNT(DISTINCT customer_user_id) as unique_customers FROM sales")
+        customers_count = cursor.fetchone()
+        
+        # c) Total de ventas a clientes con membresía
+        cursor.execute("""
+            SELECT COUNT(*) as sales_with_membership, COALESCE(SUM(s.total), 0) as amount_with_membership
+            FROM sales s
+            INNER JOIN customer_memberships cm ON s.customer_user_id = cm.user_id
+            WHERE cm.is_active = 1
+        """)
+        membership_sales = cursor.fetchone()
+        
+        # d) Total de ventas a clientes sin membresía
+        cursor.execute("""
+            SELECT COUNT(*) as sales_without_membership, COALESCE(SUM(s.total), 0) as amount_without_membership
+            FROM sales s
+            LEFT JOIN customer_memberships cm ON s.customer_user_id = cm.user_id
+            WHERE cm.user_id IS NULL OR cm.is_active != 1
+        """)
+        non_membership_sales = cursor.fetchone()
+        
+        # e) Total de boletos vendidos por película con ingresos
+        cursor.execute("""
+            SELECT m.title, 
+                   COALESCE(SUM(s.ticket_quantity), 0) as tickets_sold,
+                   COALESCE(SUM(s.total), 0) as total_revenue
+            FROM movies m
+            LEFT JOIN showtimes st ON m.id = st.movie_id
+            LEFT JOIN sales s ON st.showtime_id = s.showtime_id
+            GROUP BY m.id, m.title
+            ORDER BY tickets_sold DESC
+        """)
+        tickets_by_movie = cursor.fetchall()
+        
+        # f) Total de boletos vendidos por sala con ingresos
+        cursor.execute("""
+            SELECT st.theater_id, 
+                   COALESCE(t.name, CONCAT('Sala ', st.theater_id)) as theater_name, 
+                   COALESCE(SUM(s.ticket_quantity), 0) as tickets_sold,
+                   COALESCE(SUM(s.total), 0) as total_revenue
+            FROM showtimes st
+            LEFT JOIN theaters t ON st.theater_id = t.theater_id
+            LEFT JOIN sales s ON st.showtime_id = s.showtime_id
+            GROUP BY st.theater_id, t.name
+            ORDER BY tickets_sold DESC
+        """)
+        tickets_by_theater = cursor.fetchall()
+        
+        # g) Película más vendida con ingresos
+        cursor.execute("""
+            SELECT m.title, COALESCE(SUM(s.ticket_quantity), 0) as tickets_sold,
+                   COALESCE(SUM(s.total), 0) as total_revenue
+            FROM movies m
+            LEFT JOIN showtimes st ON m.id = st.movie_id
+            LEFT JOIN sales s ON st.showtime_id = s.showtime_id
+            GROUP BY m.id, m.title
+            ORDER BY tickets_sold DESC
+            LIMIT 1
+        """)
+        most_sold_movie = cursor.fetchone()
+        
+        # h) Película menos vendida con ingresos
+        cursor.execute("""
+            SELECT m.title, COALESCE(SUM(s.ticket_quantity), 0) as tickets_sold,
+                   COALESCE(SUM(s.total), 0) as total_revenue
+            FROM movies m
+            LEFT JOIN showtimes st ON m.id = st.movie_id
+            LEFT JOIN sales s ON st.showtime_id = s.showtime_id
+            GROUP BY m.id, m.title
+            ORDER BY tickets_sold ASC
+            LIMIT 1
+        """)
+        least_sold_movie = cursor.fetchone()
+        
+        report = {
+            "summary": {
+                "total_sales": sales_total["total_sales"],
+                "total_amount": sales_total["total_amount"],
+                "total_tickets": sum([movie["tickets_sold"] for movie in tickets_by_movie]) if tickets_by_movie else 0,
+                "total_transactions": sales_total["total_sales"],
+                "average_sale": sales_total["total_amount"] / sales_total["total_sales"] if sales_total["total_sales"] > 0 else 0,
+                "unique_customers": customers_count["unique_customers"],
+                "sales_by_movie": tickets_by_movie,
+                "sales_by_theater": tickets_by_theater
+            },
+            "membership_stats": {
+                "with_membership": membership_sales,
+                "without_membership": non_membership_sales
+            },
+            "top_movies": {
+                "most_sold": most_sold_movie,
+                "least_sold": least_sold_movie
+            },
+            "generated_at": datetime.now().isoformat()
+        }
+        
+        print(f"📊 Reporte de ventas generado exitosamente")
+        return report
+        
+    except Error as e:
+        print(f"❌ Error generando reporte: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando reporte: {str(e)}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+@app.get("/reports/detailed-sales")
+async def get_detailed_sales():
+    """Obtener ventas detalladas para administradores"""
+    connection = get_db_connection()
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        query = """
+        SELECT 
+            s.sale_id,
+            s.customer_user_id,
+            u.username,
+            u.first_name,
+            u.last_name,
+            s.showtime_id,
+            st.datetime as showtime_datetime,
+            m.title as movie_title,
+            st.theater_id,
+            s.ticket_quantity,
+            s.total,
+            s.payment_method,
+            s.sale_date,
+            GROUP_CONCAT(rs.seat_number) as seats
+        FROM sales s
+        LEFT JOIN users u ON s.customer_user_id = u.user_id
+        LEFT JOIN showtimes st ON s.showtime_id = st.showtime_id
+        LEFT JOIN movies m ON st.movie_id = m.id
+        LEFT JOIN reserved_seats rs ON s.sale_id = rs.sale_id
+        GROUP BY s.sale_id
+        ORDER BY s.sale_date DESC
+        """
+        cursor.execute(query)
+        detailed_sales = cursor.fetchall()
+        
+        # Procesar los datos para el frontend
+        processed_sales = []
+        for sale in detailed_sales:
+            processed_sales.append({
+                "sale_id": sale["sale_id"],
+                "username": sale["username"],
+                "movie_title": sale["movie_title"],
+                "theater_name": f"Sala {sale['theater_id']}" if sale["theater_id"] else "-",
+                "showtime": sale["showtime_datetime"],
+                "seats_count": sale["ticket_quantity"],
+                "total_amount": sale["total"],
+                "sale_date": sale["sale_date"],
+                "seats": sale["seats"] if sale["seats"] else ""
+            })
+        
+        print(f"📊 Ventas detalladas obtenidas: {len(processed_sales)}")
+        return {"sales": processed_sales}
+        
+    except Error as e:
+        print(f"❌ Error obteniendo ventas detalladas: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo ventas detalladas: {str(e)}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+        
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Iniciando servidor con conexión a base de datos MySQL...")

@@ -5,7 +5,7 @@ import traceback
 def create_user_controller(data: dict):
     db = MySQLConnection()
     try:
-        required_fields = ["username", "password", "first_name", "last_name", "phone", "role"]
+        required_fields = ["username", "password", "role"]
         missing_fields = [
             field for field in required_fields
             if field not in data or data.get(field) is None or data.get(field) == ""
@@ -20,10 +20,12 @@ def create_user_controller(data: dict):
             )
         username = data.get("username")
         password = data.get("password")
-        first_name = data.get("first_name")
-        last_name = data.get("last_name")
-        phone = data.get("phone")
         role = data.get("role")
+        
+        # Campos opcionales con valores por defecto
+        first_name = data.get("first_name", "Usuario")
+        last_name = data.get("last_name", "Sistema")
+        phone = data.get("phone", "0000000000")
         
         # Cheack if the user already exists
         existing_user = get_if_user_exists(db, username)
